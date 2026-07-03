@@ -239,6 +239,51 @@
   footer.appfoot{
     text-align:center; font-family: system-ui, sans-serif; font-size:11.5px; color:#8a8371; margin-top:50px;
   }
+
+  /* ============ PODCAST ============ */
+  .podcast-warning{
+    display:none; font-family: system-ui, sans-serif; background:#fbe8e6; border:2px solid var(--bad);
+    color:var(--bad); padding:12px 16px; border-radius:8px; font-size:13.5px; margin-bottom:16px; font-weight:600;
+  }
+  .podcast-layout{display:grid; grid-template-columns: 220px 1fr; gap:18px;}
+  @media(max-width:720px){.podcast-layout{grid-template-columns:1fr;}}
+  .podcast-episodes{
+    display:flex; flex-direction:column; gap:8px; font-family: system-ui, sans-serif;
+  }
+  .pod-ep-item{
+    text-align:left; border:2px solid var(--ink); border-radius:10px; padding:10px 12px; background:var(--paper-2);
+    cursor:pointer; font-size:12.5px; font-weight:600; line-height:1.35;
+  }
+  .pod-ep-item .pod-ep-len{display:block; font-weight:400; font-size:11px; color:#5a5647; margin-top:3px;}
+  .pod-ep-item:hover{background:#fff;}
+  .pod-ep-item.active{background:var(--teal); border-color:var(--teal-dark); color:#fff;}
+  .pod-ep-item.active .pod-ep-len{color:#dff3f1;}
+  .pod-ep-item.playing::before{content:"▶ "; }
+
+  .podcast-player{
+    background:var(--paper-2); border:2.5px solid var(--ink); border-radius:14px; padding:20px 22px;
+    box-shadow: var(--shadow); font-family: system-ui, sans-serif;
+  }
+  .pod-now-playing{font-family:'Courier New',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--rust-dark); font-weight:700; margin-bottom:10px;}
+  .podcast-transcript{
+    max-height:260px; overflow-y:auto; background:#fff; border:1.5px solid var(--line); border-radius:8px;
+    padding:14px 16px; font-size:14.5px; line-height:1.7; margin-bottom:12px;
+  }
+  .pod-sentence{transition: background .2s ease; padding:1px 2px; border-radius:3px;}
+  .pod-sentence.active{background: #ffe4a3; font-weight:700;}
+  .podcast-progress{height:6px; background:var(--line); border-radius:999px; overflow:hidden; margin-bottom:16px;}
+  .podcast-progress-bar{height:100%; width:0%; background:var(--rust); transition: width .2s ease;}
+  .podcast-controls{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:16px;}
+  .pod-btn{
+    width:46px; height:46px; border-radius:50%; border:2px solid var(--ink); background:var(--paper);
+    font-size:17px; cursor:pointer;
+  }
+  .pod-btn:hover{background:var(--ink); color:var(--paper);}
+  .pod-btn.big{width:58px; height:58px; font-size:22px; background:var(--rust); border-color:var(--rust-dark); color:#fff;}
+  .pod-btn.big:hover{background:var(--rust-dark);}
+  .podcast-settings{display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center; font-size:12.5px; color:#3a3830;}
+  .podcast-settings select{font-family:system-ui,sans-serif; font-size:12.5px; padding:5px 8px; border-radius:6px; border:2px solid var(--ink); background:#fff;}
+  .pod-check{display:flex; align-items:center; gap:6px;}
 </style>
 </head>
 <body>
@@ -258,6 +303,7 @@
     <button data-view="view-quiz">✅ Quiz</button>
     <button data-view="view-cram">📄 Cram Sheet</button>
     <button data-view="view-mnemo">🧠 Mnemonics</button>
+    <button data-view="view-podcast">🎧 Listen</button>
   </nav>
 
   <!-- ============ FLASHCARDS VIEW ============ -->
@@ -432,6 +478,44 @@
       <p>Silly sticks better than accurate. Use whichever phrase actually lodges in your brain.</p>
     </div>
     <div class="mnemo-grid" id="mnemo-grid"></div>
+  </section>
+
+  <!-- ============ PODCAST / LISTEN VIEW ============ -->
+  <section class="view" id="view-podcast">
+    <div class="section-head">
+      <h2>Listen While You're On Your Way</h2>
+      <p>Narrated with your device's built-in text-to-speech — no audio files, works fully offline once this page is open. Best in Chrome, Edge, or Safari.</p>
+    </div>
+    <div id="podcast-unsupported" class="podcast-warning">Your browser doesn't support speech synthesis, so audio playback isn't available here. Try opening this file in Chrome, Edge, or Safari.</div>
+    <div id="podcast-app">
+      <div class="podcast-layout">
+        <div class="podcast-episodes" id="podcast-episode-list"></div>
+        <div class="podcast-player">
+          <div class="pod-now-playing" id="pod-ep-title">Episode 1</div>
+          <div class="podcast-transcript" id="pod-transcript"></div>
+          <div class="podcast-progress"><div class="podcast-progress-bar" id="pod-progress-bar"></div></div>
+          <div class="podcast-controls">
+            <button class="pod-btn" id="pod-prev" title="Previous line">⏮</button>
+            <button class="pod-btn big" id="pod-playpause" title="Play/Pause">▶</button>
+            <button class="pod-btn" id="pod-next" title="Next line">⏭</button>
+            <button class="pod-btn" id="pod-stop" title="Restart episode">⏹</button>
+          </div>
+          <div class="podcast-settings">
+            <label>Speed
+              <select id="pod-rate">
+                <option value="0.8">0.8×</option>
+                <option value="0.9">0.9×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.15">1.15×</option>
+                <option value="1.3">1.3×</option>
+              </select>
+            </label>
+            <label>Voice <select id="pod-voice"></select></label>
+            <label class="pod-check"><input type="checkbox" id="pod-autoadvance" checked> Auto-play next episode</label>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <footer class="appfoot">Made for Nina's OutSystems Architecture exam · everything runs locally in this file, no internet needed · good luck tomorrow 🍀</footer>
@@ -1312,6 +1396,316 @@ mnemonics.forEach(m=>{
   div.innerHTML = `<div class="hook">${m.hook}</div><h4 class="phrase">${m.phrase}</h4><p>${m.text}</p>`;
   mnemoGrid.appendChild(div);
 });
+
+/* ================= PODCAST DATA ================= */
+const podcastEpisodes = [
+{
+  title: "1. The Canvas, in Plain English",
+  sentences: [
+    "Welcome back — let's talk about the Architecture Canvas, the single most important mental model for this exam.",
+    "Think of it as a three story building.",
+    "On the top floor you've got the End user layer — that's every screen, every process, everything a real person actually clicks on.",
+    "One floor down is Core — this is where your business concepts live, things like Customer, Product, or Contract, exposed as clean A P Is and core services.",
+    "In the basement is Foundation — this is the plumbing: integration services that talk to the outside world, plus your non functional requirements like theming and authentication.",
+    "Here's the one rule that ties the whole building together: you can only ever look downstairs, never upstairs.",
+    "End user modules can depend on Core, Core can depend on Foundation, but Foundation should never reach up into Core, and Core should never reach up into End user.",
+    "Why does this matter so much? Three reasons, and OutSystems repeats these three reasons constantly, so let's lock them in.",
+    "Reason one: it promotes abstraction of reusable services — you build something once in Core, and every End user app can reuse it without knowing how it works underneath.",
+    "Reason two: it optimizes lifecycle independence — Foundation and Core change slowly and carefully, while End user apps can move fast and ship often, without breaking each other.",
+    "Reason three: it minimizes the impact of change — if something breaks in Foundation, you know exactly which Core services might be affected, and from there, which End user apps.",
+    "Quick historical detour, because this shows up as trivia: ISO 9126 from 1991 defined six software quality characteristics.",
+    "ISO 25010, from 2011, kept all six and bolted on two more: Security, and Compatibility.",
+    "So if you see a question asking what's new in 25010 versus 9126, the answer is Security and Compatibility.",
+    "Let's talk about why we bother with modules in the first place — modular programming.",
+    "Four benefits, and I like the acronym A I C T: Abstraction, Isolation, Complexity management, and Teamwork.",
+    "Abstraction means consumers don't need to know how something works, just what it does.",
+    "Isolation means a bug or a change in one module doesn't ripple through everything else.",
+    "Complexity management means you can break a huge system into small, understandable pieces — divide and conquer.",
+    "And Teamwork means multiple developers, or multiple teams, can work in parallel without stepping on each other's toes.",
+    "Last piece for this episode: how do you actually design one of these architectures? There's a three step process: Disclose, Organize, Assemble.",
+    "Disclose means gathering all the requirements and concepts involved.",
+    "Organize means placing those concepts into the right layer — End user, Core, or Foundation.",
+    "And Assemble means putting the modules together into applications, respecting ownership and sponsor boundaries.",
+    "That's the Canvas in a nutshell — three layers, one direction of dependency, and three big reasons why it's worth doing properly.",
+    "Next episode, we get into patterns — Integration, Foundation, Core, and Sync — where all of this becomes concrete."
+  ]
+},
+{
+  title: "2. Patterns: Integration, Foundation, Core & Sync",
+  sentences: [
+    "Let's get concrete with Patterns — the reusable shapes you'll see over and over in real OutSystems architectures.",
+    "First up: the Integration Pattern, and it always has three parts.",
+    "A Core Service, sometimes just called C S, extends the original business concept and stays agnostic of any particular external system.",
+    "Below that, an Integration Service, or I S, abstracts the actual external A P I, hiding the messy technical details.",
+    "And below that, the external system itself — could be an E R P, a C R M, anything outside OutSystems.",
+    "So the flow is always: consumer, to Core Service, to Integration Service, to External System — never skipping a layer.",
+    "There are two flavors of this pattern, and the exam loves asking you to tell them apart.",
+    "Flavor one: Direct Integration — every request goes live, all the way out to the external system.",
+    "Benefit: your data is always perfectly fresh. Downside: more hits on the external system, more latency, and you often need a separate A P I for every retrieval use case.",
+    "Flavor two: Local Replica — you keep a cached copy of the data inside a Core Service entity, and a separate Sync module keeps that copy up to date.",
+    "Benefit: way less load on the external system, a simpler A P I, and you can mash up data from multiple places easily.",
+    "Downside: you now need a syncing strategy, and there's a window where the data might be stale.",
+    "Speaking of syncing strategies, there are two: Batch Sync and Real time Sync.",
+    "Batch Sync runs on a timer — simple, reliable, but the data can lag behind.",
+    "Real time Sync uses a publish and subscribe setup, often through an Enterprise Service Bus — the external system publishes a change, and your Sync module, which is subscribed, reacts immediately.",
+    "How do you decide between all of these? Ask yourself a chain of questions.",
+    "Is it even okay to replicate this data? If not, go Direct Integration.",
+    "If yes, do the summary fields change frequently? If they do, lean toward Real time Sync; if not, Batch Sync is fine.",
+    "Is the detail data reused a lot? If yes, consider lazy loading those details only when needed.",
+    "And here's a big one: is there more than one external source for the same concept? If so, you need a Transparency Service.",
+    "A Transparency Service sits behind one Integration Service, and it picks between multiple Driver modules — say, one driver per regional E R P — normalizing everything into one consistent shape for the consumer.",
+    "Let's move to Foundation Patterns specifically. The Extension Pattern is for wrapping something external and reusable — either an external code library, or entities that live in an external database.",
+    "Foundation Services are about exposing a clean, normalized A P I on top of a connector — think a Salesforce connector wrapped into a clean integration service that everyone else consumes.",
+    "And don't forget Integration Services Granularity — if you're integrating with a huge system like S A P, don't build one giant Integration Service with hundreds of actions.",
+    "Split it by function area — a finance one, an H R one, a materials management one — so no single module becomes a bottleneck for every consumer.",
+    "Now, Core Patterns. The Core Entity Pattern says: expose your entities as read only, and centralize every create, update, and delete into public server actions.",
+    "That way, every consumer changes data the same, controlled way — no one is reaching in and writing straight to the database.",
+    "And the Business Logic Pattern — modules with a B L suffix — exist for composite processes that touch more than one Core Service.",
+    "Picture a Customer B L module that needs both a Contract Core Service and a Customer Core Service to react to a single business event.",
+    "That's your pattern toolkit — Consumer, to Core Service, to Integration Service, to the outside world, with Local Replica, Sync, Transparency, Extension, and Business Logic patterns layered in wherever the situation calls for them.",
+    "Next up: how we validate all of this, and what to do when it's wrong."
+  ]
+},
+{
+  title: "3. Validation, Refactoring & Moving Things Around",
+  sentences: [
+    "Time to talk about the rules that keep an architecture honest, starting at the module level.",
+    "Rule one: No Upward References. A module can never call something in a layer above it. Foundation can't call Core, Core can't call End user.",
+    "Rule two: No Side References between End user modules, with one exception: screen references are allowed, because linking to another screen is normal navigation, not a hidden logic dependency.",
+    "Rule three: No Circular References — if module A depends on B, B depends on C, and C depends back on A, that's a cycle, and cycles make everything harder to deploy independently.",
+    "Now zoom out to the Application level, because applications get validated too, with four of their own rules.",
+    "Application rule one: layer your modules correctly — this is just making sure the module level rules are actually being followed.",
+    "Application rule two: layer your applications correctly, and here's the key fact — an application's layer is defined by the highest layer module inside it.",
+    "So if an app has ninety nine Core modules and just one End user module, that whole application is classified as an End user application.",
+    "Application rule three: Don't Mix Owners — if a module is being consumed by teams other than the one that owns it, and their needs start pulling in different directions, split the module or formally transfer ownership.",
+    "Application rule four: Don't Mix Sponsors — different lines of business need to deploy on their own schedule, so keep only the truly common stuff shared, and let each business line own the rest independently.",
+    "When Discovery or A I Mentor flags a pile of violations, you can't fix them all at once, so there's a priority order, and this is a favorite trick question.",
+    "Priority one: upper or side references into End user modules.",
+    "Priority two: direct cycles between Core modules.",
+    "Priority three: upper references into Core modules.",
+    "Priority four: direct cycles between Foundation modules.",
+    "Here's the trap: that order is fixed by tier, no matter how many consumers are involved — a priority one issue with ten consumers still gets fixed before a priority three issue with a hundred consumers.",
+    "Consumer count only breaks ties within the same tier, not across tiers.",
+    "Let's talk about actually extracting a Core, step by step, when a module has grown too many responsibilities.",
+    "Step one: identify which elements are actually being consumed by others.",
+    "Step two: clone the module.",
+    "Step three: rename the original copy, adding a C S suffix — that one becomes your new dedicated Core Service.",
+    "Step four: the clone keeps the original name, so every existing consumer and every existing U R L keeps working without any changes.",
+    "Step five: keep the consumed elements, and their dependencies, inside the new Core module, and remove them from the clone.",
+    "Step six: have the clone reference the new Core module for anything it still needs.",
+    "The whole point is that from the outside, nothing looks different — the surgery happens underneath.",
+    "One more practical skill: moving individual elements between modules.",
+    "Actions, Structures, Blocks, and Screens are generally safe to move — just double check who's consuming them.",
+    "But four things need extra care: Timers, because of their schedule configuration; Site Properties, because their effective value is set per environment; Web references, because endpoints can shift; and Roles, because of existing user assignments.",
+    "If you're moving a B P T process specifically, don't just cut and paste it — copy it to the new module first, then untrigger the old one so it stops accepting new instances while any in flight instances finish naturally, deploy everywhere, and only delete the old process once everything has drained.",
+    "And if you're moving an Entity along with its data, use the Refactor component: copy the entity to the target module, run the refactor tool, do a full compile across all affected modules before touching any references, then update the reference, and publish.",
+    "Get those two migration checklists memorized, because scenario questions love describing exactly this kind of mid air surgery and asking what step comes next."
+  ]
+},
+{
+  title: "4. Mobile Architecture & Style Guides",
+  sentences: [
+    "Let's switch gears to mobile architecture, because OutSystems treats mobile as genuinely different from reactive web, not just a smaller screen.",
+    "Three guiding principles, and I think of them as Lazy, Local, and Less.",
+    "Lazy: think lazy loading — don't try to fetch everything the moment a screen initializes; fetch what's needed, when it's needed, ideally in parallel.",
+    "Local: use local storage, but keep it lightweight — don't just mirror the entire server database structure onto the device, only store the specific fields and records the app actually needs.",
+    "Less: avoid unnecessary server calls — every round trip costs battery, time, and reliability, especially on a spotty connection.",
+    "Now, the screen lifecycle, because the exam loves ordering questions here.",
+    "First, On Initialize, which fires before navigation and before any data fetching happens.",
+    "Then On Ready, once the screen's structure exists.",
+    "Then On Render, which actually fires every time the data changes, not just once.",
+    "Then On After Fetch, right after an aggregate or data fetch completes, but before rendering that new data.",
+    "For blocks specifically, there's also On Parameters Changed, when an input parameter updates.",
+    "And finally On Destroy, when the screen is torn down.",
+    "A common mistake the exam will describe: fetching all your data inside On Initialize, which blocks navigation and makes the app feel sluggish — the fix is always to make that fetching lazy, parallel, or on demand.",
+    "On security: mobile apps should use S S L Pinning, which checks the server's certificate directly on the device, protecting against man in the middle attacks even on compromised networks.",
+    "Now, Style Guides, which is really about your Theme architecture across an entire portfolio of apps.",
+    "Four building blocks: the Theme itself, which holds your C S S; U I Patterns, your reusable components; a Template, which bundles menu, login, and a theme reference together; and a Live Style Guide, which is a running example of it all in action.",
+    "When you're building a custom style guide on top of OutSystems U I, you've got two choices: Specialize, or Clone.",
+    "Specialize means your custom theme keeps a live reference back to the base theme — you automatically inherit future OutSystems updates, at a small performance cost.",
+    "Clone means you copy the base theme outright — best possible performance, but you're on your own for future updates.",
+    "And when you're sharing a style guide across multiple applications, there are three common setups: Independent Apps, each with their own menu and their own login; Intranet, sharing a login flow but keeping separate menus; and Portal, sharing both a common menu and a common login.",
+    "One more rule worth repeating, because it's easy to violate by accident: keep your C S S inside the Theme, never scattered across individual Blocks or Screens — it keeps performance predictable and your look and feel consistent.",
+    "That's mobile and styling — lazy, local, less, get your lifecycle order memorized, and know your Specialize versus Clone trade off cold."
+  ]
+},
+{
+  title: "5. Naming Conventions & Final Cram",
+  sentences: [
+    "Last episode — let's speed run the naming conventions, because these show up constantly as quick recognition questions.",
+    "In the Core layer, six suffixes: C S for Core Service, B L for Business Logic, C W for Core Widgets, Eng for a calculation Engine, Sync for a synchronization module, and A P I for a module explicitly exposing an A P I to consumers outside OutSystems.",
+    "In the Foundation layer, six more: Lib for a generic library, I S for an Integration Service, Drv for a Driver module, usually the implementation behind a Transparency Service, Th for Theme, Pat for U I Patterns, and Plug for a Plugin.",
+    "And if a module is mobile only, you just tack on an extra M — so Th becomes M Th, and Pat becomes M Pat.",
+    "Alright, let's do one final speed lap through everything, like flashcards out loud.",
+    "Three layers: End user on top, Core in the middle, Foundation on the bottom — dependencies only ever point downward.",
+    "Three module validation rules: no upward references, no side references between End user modules except for screens, no circular references.",
+    "Four application validation rules: layer your modules correctly, layer your applications correctly based on their highest layer module, don't mix owners, don't mix sponsors.",
+    "Refactoring priority, fixed tier order: End user upward or side references first, then Core cycles, then Core upward references, then Foundation cycles — consumer count only breaks ties inside a tier.",
+    "Extracting a Core: identify, clone, rename the original to C S, keep the clone's name, keep the shared stuff in the new Core, remove it from the clone, and reference the Core — consumers never notice.",
+    "Mobile: lazy loading, lightweight local storage, avoid unnecessary server calls, and know your screen lifecycle order — Initialize, Ready, Render, After Fetch, Parameters Changed for blocks, Destroy.",
+    "Style guides: Specialize to inherit updates, Clone for maximum performance, and three sharing setups — Independent, Intranet, Portal.",
+    "Integration patterns: Core Service, Integration Service, External System, always in that order — Direct Integration for freshness, Local Replica plus Batch or Real time Sync for less external load, and Transparency Service the moment more than one source represents the same concept.",
+    "Design process: Disclose, Organize, Assemble.",
+    "And the number that matters most tonight: seventy percent to pass.",
+    "You've now heard this material twice — once in your own studying, and once out loud, in your ear, on your way to the exam.",
+    "Walk in, trust the layers, trust the rules, and go pass this thing."
+  ]
+}
+];
+
+/* ================= PODCAST PLAYER LOGIC ================= */
+const ttsSupported = 'speechSynthesis' in window;
+let podEpIdx = 0;
+let podLineIdx = 0;
+let podSpeaking = false;
+let podRate = 1;
+let podVoice = null;
+let podVoicesList = [];
+
+const podEpisodeListEl = document.getElementById('podcast-episode-list');
+const podTranscriptEl = document.getElementById('pod-transcript');
+const podTitleEl = document.getElementById('pod-ep-title');
+const podProgressBar = document.getElementById('pod-progress-bar');
+const podPlayBtn = document.getElementById('pod-playpause');
+
+function estimateMinutes(sentences){
+  const words = sentences.join(' ').split(/\s+/).length;
+  return Math.max(1, Math.round(words / 150));
+}
+
+function renderEpisodeList(){
+  podEpisodeListEl.innerHTML = '';
+  podcastEpisodes.forEach((ep, i)=>{
+    const div = document.createElement('div');
+    div.className = 'pod-ep-item' + (i===podEpIdx ? ' active':'') + (i===podEpIdx && podSpeaking ? ' playing':'');
+    div.innerHTML = `${ep.title}<span class="pod-ep-len">~${estimateMinutes(ep.sentences)} min</span>`;
+    div.addEventListener('click', ()=>{ loadEpisode(i); });
+    podEpisodeListEl.appendChild(div);
+  });
+}
+
+function renderTranscript(){
+  const ep = podcastEpisodes[podEpIdx];
+  podTitleEl.textContent = ep.title;
+  podTranscriptEl.innerHTML = ep.sentences.map((s,i)=>`<span class="pod-sentence" data-i="${i}">${s} </span>`).join('');
+}
+
+function highlightLine(i){
+  document.querySelectorAll('.pod-sentence').forEach(el=>el.classList.remove('active'));
+  const el = document.querySelector(`.pod-sentence[data-i="${i}"]`);
+  if(el){
+    el.classList.add('active');
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+  const total = podcastEpisodes[podEpIdx].sentences.length;
+  podProgressBar.style.width = `${Math.round(((i+1)/total)*100)}%`;
+}
+
+function loadEpisode(i, autoplay){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  podEpIdx = i;
+  podLineIdx = 0;
+  podSpeaking = false;
+  renderEpisodeList();
+  renderTranscript();
+  highlightLine(0);
+  updatePlayButton();
+  if(autoplay) togglePlay(true);
+}
+
+function updatePlayButton(){
+  podPlayBtn.textContent = podSpeaking ? '⏸' : '▶';
+  renderEpisodeList();
+}
+
+function speakLine(i){
+  if(!ttsSupported) return;
+  const ep = podcastEpisodes[podEpIdx];
+  if(i >= ep.sentences.length){
+    podSpeaking = false;
+    updatePlayButton();
+    const autoAdv = document.getElementById('pod-autoadvance').checked;
+    if(autoAdv && podEpIdx < podcastEpisodes.length-1){
+      loadEpisode(podEpIdx+1, true);
+    }
+    return;
+  }
+  podLineIdx = i;
+  highlightLine(i);
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(ep.sentences[i]);
+  utter.rate = podRate;
+  if(podVoice) utter.voice = podVoice;
+  utter.onend = ()=>{ if(podSpeaking) speakLine(i+1); };
+  utter.onerror = ()=>{ podSpeaking = false; updatePlayButton(); };
+  window.speechSynthesis.speak(utter);
+}
+
+function togglePlay(forcePlay){
+  if(!ttsSupported) return;
+  if(podSpeaking && !forcePlay){
+    window.speechSynthesis.cancel();
+    podSpeaking = false;
+    updatePlayButton();
+  } else {
+    podSpeaking = true;
+    updatePlayButton();
+    speakLine(podLineIdx);
+  }
+}
+
+function stopEpisode(){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  podSpeaking = false;
+  podLineIdx = 0;
+  highlightLine(0);
+  updatePlayButton();
+}
+
+function stepLine(delta){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  const ep = podcastEpisodes[podEpIdx];
+  podLineIdx = Math.min(Math.max(podLineIdx+delta,0), ep.sentences.length-1);
+  highlightLine(podLineIdx);
+  if(podSpeaking) speakLine(podLineIdx);
+}
+
+function populatePodVoices(){
+  if(!ttsSupported) return;
+  const all = window.speechSynthesis.getVoices();
+  podVoicesList = all.filter(v=>v.lang.toLowerCase().startsWith('en'));
+  if(podVoicesList.length === 0) podVoicesList = all;
+  const sel = document.getElementById('pod-voice');
+  sel.innerHTML = podVoicesList.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+  if(podVoicesList.length){
+    podVoice = podVoicesList[0];
+  }
+}
+
+if(ttsSupported){
+  window.speechSynthesis.onvoiceschanged = populatePodVoices;
+  populatePodVoices();
+
+  document.getElementById('pod-playpause').addEventListener('click', ()=>togglePlay(false));
+  document.getElementById('pod-stop').addEventListener('click', stopEpisode);
+  document.getElementById('pod-next').addEventListener('click', ()=>stepLine(1));
+  document.getElementById('pod-prev').addEventListener('click', ()=>stepLine(-1));
+  document.getElementById('pod-rate').addEventListener('change', (e)=>{
+    podRate = parseFloat(e.target.value);
+    if(podSpeaking) speakLine(podLineIdx);
+  });
+  document.getElementById('pod-voice').addEventListener('change', (e)=>{
+    podVoice = podVoicesList[parseInt(e.target.value)];
+    if(podSpeaking) speakLine(podLineIdx);
+  });
+
+  renderEpisodeList();
+  renderTranscript();
+  highlightLine(0);
+} else {
+  document.getElementById('podcast-unsupported').style.display = 'block';
+  document.getElementById('podcast-app').style.display = 'none';
+}
 
 /* ================= TAB NAV ================= */
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
