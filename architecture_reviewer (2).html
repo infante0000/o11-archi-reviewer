@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Canvas — Last-Night Reviewer</title>
+<style>
+  :root{
+    --ink:#1b1f2a;
+    --paper:#f3ede0;
+    --paper-2:#ebe3d2;
+    --line: #d8cdb4;
+    --rust:#c1502e;
+    --rust-dark:#96391f;
+    --teal:#1f6f6b;
+    --teal-dark:#164f4c;
+    --gold:#b8862c;
+    --core-orange:#d98324;
+    --foundation-green:#1f6f4a;
+    --enduser-blue:#2464a8;
+    --ext-grey:#5b5f6b;
+    --good:#1f6f4a;
+    --bad:#a3312a;
+    --shadow: 0 6px 18px rgba(27,31,42,0.14);
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 90% -10%, rgba(193,80,46,0.08), transparent 60%),
+      radial-gradient(1000px 600px at -10% 110%, rgba(31,111,107,0.10), transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .app{max-width:980px;margin:0 auto;padding:18px 16px 80px;}
+
+  /* Header */
+  header.top{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+    gap:10px; border-bottom:3px solid var(--ink); padding-bottom:14px; margin-bottom:18px;
+  }
+  .brand-eyebrow{
+    font-family: 'Courier New', monospace; letter-spacing:0.14em; text-transform:uppercase;
+    font-size:11px; color:var(--rust-dark); font-weight:700; margin-bottom:4px;
+  }
+  h1.title{font-size:clamp(24px,4.5vw,34px); margin:0; letter-spacing:-0.01em;}
+  .subtitle{font-family: system-ui, sans-serif; font-size:13px; color:#5a5647; margin-top:6px; max-width:56ch;}
+  .examtag{
+    font-family: system-ui, sans-serif; background:var(--ink); color:var(--paper);
+    padding:8px 14px; border-radius:999px; font-size:12px; white-space:nowrap; font-weight:600;
+  }
+
+  /* Tabs */
+  nav.tabs{
+    display:flex; gap:6px; margin:20px 0 22px; flex-wrap:wrap;
+    font-family: system-ui, sans-serif;
+  }
+  nav.tabs button{
+    appearance:none; border:2px solid var(--ink); background:transparent; color:var(--ink);
+    padding:9px 16px; font-size:13.5px; font-weight:700; border-radius:999px; cursor:pointer;
+    transition: all .15s ease; letter-spacing:0.01em;
+  }
+  nav.tabs button:hover{background:rgba(27,31,42,0.06);}
+  nav.tabs button.active{background:var(--ink); color:var(--paper);}
+
+  section.view{display:none;}
+  section.view.active{display:block; animation: fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .section-head{margin-bottom:16px;}
+  .section-head h2{font-size:22px; margin:0 0 4px;}
+  .section-head p{font-family: system-ui, sans-serif; font-size:13px; color:#5a5647; margin:0;}
+
+  /* ============ FLASHCARDS ============ */
+  .fc-toolbar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px;
+    font-family: system-ui, sans-serif;
+  }
+  select, .btn{
+    font-family: system-ui, sans-serif; font-size:13px; padding:8px 12px; border-radius:8px;
+    border:2px solid var(--ink); background:var(--paper); color:var(--ink); cursor:pointer; font-weight:600;
+  }
+  .btn.primary{background:var(--rust); border-color:var(--rust-dark); color:#fff;}
+  .btn.primary:hover{background:var(--rust-dark);}
+  .btn:hover{background:rgba(27,31,42,0.06);}
+  .fc-progress{font-family:'Courier New',monospace; font-size:12.5px; color:#5a5647;}
+
+  .card-stage{
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .flashcard{
+    width:100%; max-width:640px; height:280px; perspective:1400px; cursor:pointer;
+  }
+  .flashcard-inner{
+    position:relative; width:100%; height:100%; transition: transform .5s cubic-bezier(.2,.8,.3,1);
+    transform-style:preserve-3d;
+  }
+  .flashcard.flipped .flashcard-inner{transform:rotateY(180deg);}
+  .face{
+    position:absolute; inset:0; backface-visibility:hidden; border-radius:14px;
+    border:2.5px solid var(--ink); box-shadow: var(--shadow);
+    display:flex; flex-direction:column; justify-content:center; padding:28px 32px;
+    text-align:center;
+  }
+  .face.front{background: var(--paper-2);}
+  .face.back{background: var(--ink); color:var(--paper); transform:rotateY(180deg);}
+  .face .tag{
+    position:absolute; top:14px; left:16px; font-family:'Courier New',monospace; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:0.1em; opacity:0.65;
+  }
+  .face .qmark{position:absolute; top:12px; right:18px; font-size:22px; opacity:0.25;}
+  .face h3{font-size:clamp(18px,3vw,24px); margin:0; line-height:1.3;}
+  .face p{font-family: system-ui, sans-serif; font-size:15px; margin:10px 0 0; line-height:1.5;}
+  .flip-hint{font-family: system-ui, sans-serif; font-size:11.5px; color:#8a8371; text-align:center;}
+  .face.back .flip-hint{color:#c9c2ac;}
+
+  .card-nav{display:flex; gap:12px; align-items:center;}
+  .card-nav button{
+    width:42px; height:42px; border-radius:50%; border:2px solid var(--ink); background:var(--paper);
+    font-size:18px; cursor:pointer; font-weight:700;
+  }
+  .card-nav button:hover{background:var(--ink); color:var(--paper);}
+
+  /* ============ QUIZ ============ */
+  .quiz-filters{
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; font-family: system-ui, sans-serif;
+  }
+  .chip{
+    padding:7px 13px; border-radius:999px; border:2px solid var(--ink); font-size:12.5px;
+    font-weight:700; cursor:pointer; background:var(--paper); user-select:none;
+  }
+  .chip.active{background:var(--teal); border-color:var(--teal-dark); color:#fff;}
+
+  .quiz-scorebar{
+    display:flex; justify-content:space-between; align-items:center; font-family: system-ui, sans-serif;
+    font-size:13px; margin-bottom:14px; color:#5a5647; flex-wrap:wrap; gap:8px;
+  }
+  .quiz-scorebar b{color:var(--ink);}
+
+  .qcard{
+    background:var(--paper-2); border:2.5px solid var(--ink); border-radius:14px; padding:24px 24px 20px;
+    box-shadow: var(--shadow);
+  }
+  .qcat{
+    font-family:'Courier New',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--rust-dark); font-weight:700; margin-bottom:8px;
+  }
+  .qtext{font-size:19px; margin:0 0 18px; line-height:1.4;}
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .opt{
+    font-family: system-ui, sans-serif; text-align:left; padding:12px 16px; border-radius:9px;
+    border:2px solid var(--ink); background:var(--paper); cursor:pointer; font-size:14.5px;
+    transition: all .12s ease;
+  }
+  .opt:hover{background:rgba(27,31,42,0.06);}
+  .opt.correct{background:var(--good); border-color:#154d34; color:#fff;}
+  .opt.incorrect{background:var(--bad); border-color:#6e211c; color:#fff;}
+  .opt.disabled{cursor:default;}
+  .diagram-box{
+    background:#fff; border:2px solid var(--ink); border-radius:10px; padding:10px 12px 8px;
+    margin-bottom:16px;
+  }
+  .diagram-box svg{width:100%; height:auto; display:block; max-height:340px;}
+  .diagram-legend{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:6px;
+    font-family: system-ui, sans-serif; font-size:11px; color:#5a5647;
+  }
+  .diagram-legend span{display:flex; align-items:center; gap:5px;}
+  .diagram-legend i{width:10px; height:10px; border-radius:3px; display:inline-block; border:1px solid var(--ink);}
+
+  .explain{
+    font-family: system-ui, sans-serif; font-size:13.5px; margin-top:16px; padding:14px 16px;
+    background:#fff; border-left:4px solid var(--teal); border-radius:6px; display:none; line-height:1.5;
+  }
+  .explain.show{display:block;}
+  .quiz-actions{display:flex; justify-content:space-between; margin-top:18px; font-family: system-ui, sans-serif;}
+  .quiz-actions button{font-family: system-ui, sans-serif;}
+
+  .quiz-done{
+    text-align:center; padding:40px 20px; font-family: system-ui, sans-serif;
+  }
+  .quiz-done .score-big{font-family: Georgia, serif; font-size:52px; font-weight:700; color:var(--rust-dark);}
+
+  /* ============ CRAM SHEET ============ */
+  .cram-wrap{
+    background:#fff; border:2.5px solid var(--ink); border-radius:10px; padding:22px 26px;
+    box-shadow: var(--shadow);
+  }
+  .cram-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:0 26px;
+    font-family: system-ui, sans-serif; font-size:11.8px; line-height:1.42;
+  }
+  .cram-grid h3{
+    font-family: Georgia, serif; font-size:13.5px; text-transform:uppercase; letter-spacing:0.03em;
+    border-bottom:2px solid var(--ink); margin:14px 0 6px; padding-bottom:2px; color:var(--rust-dark);
+  }
+  .cram-grid h3:first-child{margin-top:0;}
+  .cram-grid ul{margin:0 0 4px; padding-left:16px;}
+  .cram-grid li{margin-bottom:2px;}
+  .cram-grid .mono{font-family:'Courier New',monospace; background:#eee; padding:0 4px; border-radius:3px;}
+  .layerbox{display:inline-block; padding:1px 6px; border-radius:4px; color:#fff; font-weight:700; font-size:10.5px;}
+  .lb-end{background:var(--enduser-blue);}
+  .lb-core{background:var(--core-orange);}
+  .lb-found{background:var(--foundation-green);}
+  .lb-ext{background:var(--ext-grey);}
+  .print-btn{margin-bottom:14px;}
+
+  @media print{
+    body{background:#fff;}
+    nav.tabs, .print-btn, .subtitle, .examtag, .brand-eyebrow, .section-head p{display:none !important;}
+    section.view{display:none !important;}
+    section.view#view-cram{display:block !important;}
+    .app{max-width:100%; padding:0;}
+    .cram-wrap{border:none; box-shadow:none; padding:0;}
+    .cram-grid{font-size:10px;}
+  }
+
+  /* ============ MNEMONICS ============ */
+  .mnemo-grid{display:grid; grid-template-columns:1fr; gap:14px;}
+  @media(min-width:720px){.mnemo-grid{grid-template-columns:1fr 1fr;}}
+  .mnemo-card{
+    background:var(--paper-2); border:2.5px solid var(--ink); border-radius:12px; padding:18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .mnemo-card .hook{
+    font-family: system-ui, sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--teal-dark); font-weight:700; margin-bottom:6px;
+  }
+  .mnemo-card h4{margin:0 0 8px; font-size:17px;}
+  .mnemo-card p{font-family: system-ui, sans-serif; font-size:13.5px; margin:0; color:#3a3830; line-height:1.5;}
+  .mnemo-card .phrase{
+    font-style:italic; color:var(--rust-dark); font-weight:700; font-family:Georgia,serif; font-size:15.5px;
+  }
+
+  footer.appfoot{
+    text-align:center; font-family: system-ui, sans-serif; font-size:11.5px; color:#8a8371; margin-top:50px;
+  }
+
+  /* ============ PODCAST ============ */
+  .podcast-warning{
+    display:none; font-family: system-ui, sans-serif; background:#fbe8e6; border:2px solid var(--bad);
+    color:var(--bad); padding:12px 16px; border-radius:8px; font-size:13.5px; margin-bottom:16px; font-weight:600;
+  }
+  .podcast-layout{display:grid; grid-template-columns: 220px 1fr; gap:18px;}
+  @media(max-width:720px){.podcast-layout{grid-template-columns:1fr;}}
+  .podcast-episodes{
+    display:flex; flex-direction:column; gap:8px; font-family: system-ui, sans-serif;
+  }
+  .pod-ep-item{
+    text-align:left; border:2px solid var(--ink); border-radius:10px; padding:10px 12px; background:var(--paper-2);
+    cursor:pointer; font-size:12.5px; font-weight:600; line-height:1.35;
+  }
+  .pod-ep-item .pod-ep-len{display:block; font-weight:400; font-size:11px; color:#5a5647; margin-top:3px;}
+  .pod-ep-item:hover{background:#fff;}
+  .pod-ep-item.active{background:var(--teal); border-color:var(--teal-dark); color:#fff;}
+  .pod-ep-item.active .pod-ep-len{color:#dff3f1;}
+  .pod-ep-item.playing::before{content:"▶ "; }
+
+  .podcast-player{
+    background:var(--paper-2); border:2.5px solid var(--ink); border-radius:14px; padding:20px 22px;
+    box-shadow: var(--shadow); font-family: system-ui, sans-serif;
+  }
+  .pod-now-playing{font-family:'Courier New',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--rust-dark); font-weight:700; margin-bottom:10px;}
+  .podcast-transcript{
+    max-height:260px; overflow-y:auto; background:#fff; border:1.5px solid var(--line); border-radius:8px;
+    padding:14px 16px; font-size:14.5px; line-height:1.7; margin-bottom:12px;
+  }
+  .pod-sentence{transition: background .2s ease; padding:1px 2px; border-radius:3px;}
+  .pod-sentence.active{background: #ffe4a3; font-weight:700;}
+  .podcast-progress{height:6px; background:var(--line); border-radius:999px; overflow:hidden; margin-bottom:16px;}
+  .podcast-progress-bar{height:100%; width:0%; background:var(--rust); transition: width .2s ease;}
+  .podcast-controls{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:16px;}
+  .pod-btn{
+    width:46px; height:46px; border-radius:50%; border:2px solid var(--ink); background:var(--paper);
+    font-size:17px; cursor:pointer;
+  }
+  .pod-btn:hover{background:var(--ink); color:var(--paper);}
+  .pod-btn.big{width:58px; height:58px; font-size:22px; background:var(--rust); border-color:var(--rust-dark); color:#fff;}
+  .pod-btn.big:hover{background:var(--rust-dark);}
+  .podcast-settings{display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center; font-size:12.5px; color:#3a3830;}
+  .podcast-settings select{font-family:system-ui,sans-serif; font-size:12.5px; padding:5px 8px; border-radius:6px; border:2px solid var(--ink); background:#fff;}
+  .pod-check{display:flex; align-items:center; gap:6px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div>
+      <div class="brand-eyebrow">OutSystems 11 · Architecture Specialist</div>
+      <h1 class="title">Last-Night Reviewer</h1>
+      <div class="subtitle">Built from the Base Architecture Boot Camp deck — Canvas, Patterns, Validation &amp; Refactoring, Mobile, Style Guides. 100% offline, no data leaves this file.</div>
+    </div>
+    <div class="examtag">70% to pass — you've got this</div>
+  </header>
+
+  <nav class="tabs">
+    <button data-view="view-flash" class="active">🃏 Flashcards</button>
+    <button data-view="view-quiz">✅ Quiz</button>
+    <button data-view="view-cram">📄 Cram Sheet</button>
+    <button data-view="view-mnemo">🧠 Mnemonics</button>
+    <button data-view="view-podcast">🎧 Listen</button>
+  </nav>
+
+  <!-- ============ FLASHCARDS VIEW ============ -->
+  <section class="view active" id="view-flash">
+    <div class="section-head">
+      <h2>Flashcards</h2>
+      <p>Tap a card to flip it. Filter by topic if you want to drill your weak spots first.</p>
+    </div>
+    <div class="fc-toolbar">
+      <select id="fc-topic"></select>
+      <button class="btn" id="fc-shuffle">🔀 Shuffle</button>
+      <span class="fc-progress" id="fc-progress"></span>
+    </div>
+    <div class="card-stage">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-inner">
+          <div class="face front">
+            <span class="tag" id="fc-tag-front">TOPIC</span>
+            <span class="qmark">?</span>
+            <h3 id="fc-front-text">Front</h3>
+            <div class="flip-hint">tap to flip</div>
+          </div>
+          <div class="face back">
+            <span class="tag" id="fc-tag-back">ANSWER</span>
+            <p id="fc-back-text">Back</p>
+            <div class="flip-hint">tap to flip back</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-nav">
+        <button id="fc-prev">‹</button>
+        <button id="fc-flip-btn">⤾</button>
+        <button id="fc-next">›</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ VIEW ============ -->
+  <section class="view" id="view-quiz">
+    <div class="section-head">
+      <h2>Multiple Choice Practice</h2>
+      <p>Definitions, key concepts, scenarios, and likely-exam questions. Pick a category or mix them all.</p>
+    </div>
+    <div class="quiz-filters" id="quiz-filters"></div>
+    <div class="quiz-scorebar">
+      <span>Question <b id="q-index">1</b> / <b id="q-total">0</b></span>
+      <span>Score: <b id="q-score">0</b>/<b id="q-answered">0</b></span>
+      <button class="btn" id="q-restart">↺ Restart set</button>
+    </div>
+    <div id="quiz-body"></div>
+  </section>
+
+  <!-- ============ CRAM SHEET VIEW ============ -->
+  <section class="view" id="view-cram">
+    <div class="section-head">
+      <h2>Last-Hour Cram Sheet</h2>
+      <p>One page. Read this right before you walk in. Use Print for a paper copy (fits one sheet).</p>
+    </div>
+    <button class="btn primary print-btn" onclick="window.print()">🖨️ Print this page</button>
+    <div class="cram-wrap">
+      <div class="cram-grid">
+        <div>
+          <h3>The 3 Layers (top → bottom)</h3>
+          <ul>
+            <li><span class="layerbox lb-end">END-USER</span> UI + Processes. Talks to users.</li>
+            <li><span class="layerbox lb-core">CORE</span> APIs + Core services. Business concepts.</li>
+            <li><span class="layerbox lb-found">FOUNDATION</span> Integration services + NFRs. Talks to outside world.</li>
+          </ul>
+          <p><b>Rule:</b> lower layers never call upward. External consumers hit Core (APIs); external producers/DBs sit below Foundation.</p>
+
+          <h3>Naming Suffixes</h3>
+          <ul>
+            <li><b>Core:</b> <span class="mono">_CS</span> Core Service · <span class="mono">_BL</span> Business Logic · <span class="mono">_CW</span> Core Widgets · <span class="mono">_Eng</span> Calc Engine · <span class="mono">_Sync</span> Sync module · <span class="mono">_API</span> exposes API externally</li>
+            <li><b>Foundation:</b> <span class="mono">_Lib</span> generic library · <span class="mono">_IS</span> Integration Service · <span class="mono">_Drv</span> Driver · <span class="mono">_Th</span> Theme · <span class="mono">_Pat</span> UI Patterns · <span class="mono">_Plug</span> Plugin</li>
+            <li>Add <span class="mono">M</span> for mobile-only: <span class="mono">_MTh</span>, <span class="mono">_MPat</span></li>
+          </ul>
+
+          <h3>Integration Pattern</h3>
+          <ul>
+            <li>Flow: Consumer → <b>Core Service (_CS)</b> → <b>Integration Service (_IS)</b> → External System</li>
+            <li><b>Direct Integration:</b> always fresh, but more hits/latency/APIs</li>
+            <li><b>Local Replica:</b> less external impact, simpler API, mashup-friendly — but needs a sync strategy</li>
+            <li><b>Transparency Service:</b> use when &gt;1 external source for the same concept; IS picks the right Driver</li>
+          </ul>
+
+          <h3>Sync Patterns (Local Replica)</h3>
+          <ul>
+            <li><b>Batch Sync:</b> async, scheduled, simple, but data can be stale</li>
+            <li><b>Real-time Sync:</b> pub/sub or ESB, always fresh, but needs external system callback support</li>
+            <li>Decide by asking: OK to replicate? Do summary fields change often? Is detail reused a lot? &gt;1 source for same concept? (→ Transparency)</li>
+          </ul>
+
+          <h3>Module Elements by Layer</h3>
+          <ul>
+            <li><b>Foundation:</b> Data, Logic, Interface <i>(no Processes)</i></li>
+            <li><b>Core:</b> Data (read-only entities), Logic (CRUD/audit/roles), Interface (business blocks), Processes (async)</li>
+            <li><b>End-User:</b> Data (aux/temp), Logic (use-case specific), Interface (role-based UI), Processes (workflows)</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Validation Rules — Modules</h3>
+          <ul>
+            <li><b>Rule 1</b> — No Upward References</li>
+            <li><b>Rule 2</b> — No Side References between End-User modules <i>(screen refs OK)</i></li>
+            <li><b>Rule 3</b> — No Circular References</li>
+            <li>Extra: avoid exposing Core-type entities from Foundation</li>
+          </ul>
+
+          <h3>Validation Rules — Applications</h3>
+          <ul>
+            <li><b>Rule 1</b> — Layer your modules correctly</li>
+            <li><b>Rule 2</b> — Layer applications correctly <i>(an app's layer = its highest-layer module)</i></li>
+            <li><b>Rule 3</b> — Don't mix owners <i>(split module / promote ownership)</i></li>
+            <li><b>Rule 4</b> — Don't mix sponsors <i>(each line-of-business deploys independently)</i></li>
+          </ul>
+
+          <h3>Refactoring Priority Order</h3>
+          <ol style="margin:0 0 4px; padding-left:16px;">
+            <li>Upper/side refs to End-user modules</li>
+            <li>Direct cycles between Core modules</li>
+            <li>Upper refs to Core modules</li>
+            <li>Direct cycles between Foundation modules</li>
+          </ol>
+          <p>Within any tier: fix the module with the <b>most consumers</b> first. Freeze feature dev on modules being refactored.</p>
+
+          <h3>Extract a Core — 6 steps</h3>
+          <p>Identify consumed elements → Clone module → Rename original to <span class="mono">_CS</span>, clone keeps original name → Keep consumed elements + deps in new Core → Remove those from the clone → Reference the Core. <i>(Consumers/URLs untouched.)</i></p>
+
+          <h3>Moving Elements</h3>
+          <ul>
+            <li><b>Safe to move freely:</b> Actions, Structures, Blocks, Screens</li>
+            <li><b>Watch out for:</b> Timers (schedule), Site Properties (effective value), Web References (endpoint/URL), Roles (user assignments)</li>
+            <li><b>BPT process:</b> copy → untrigger old (let in-flight finish) → deploy everywhere → delete old once drained</li>
+            <li><b>Entities via Refactor tool:</b> copy to target → run Refactor → full compile (no ref changes yet) → update reference → publish</li>
+          </ul>
+
+          <h3>Mobile Architecture</h3>
+          <ul>
+            <li>3 pillars: <b>Lazy Load</b>, <b>Local Storage</b>, <b>Avoid Server Calls</b></li>
+            <li>Screen events order: OnInitialize → OnReady → OnRender → OnAfterFetch → (OnParametersChanged for blocks) → OnDestroy</li>
+            <li>Never fetch data in event handlers directly — prefer on-demand/parallel Aggregates</li>
+            <li>Local storage: denormalize, keep only needed attributes, avoid mirroring server schema</li>
+            <li>CSS lives in the Theme only — never in Blocks/Screens</li>
+            <li>Use SSL Pinning to stop man-in-the-middle attacks</li>
+          </ul>
+
+          <h3>Style Guides</h3>
+          <ul>
+            <li><b>Specialize</b> (reference base theme): inherits updates, slightly slower</li>
+            <li><b>Clone</b> (copy base theme): best performance, no auto-updates</li>
+            <li><b>Build your own:</b> when nothing existing fits</li>
+            <li>Sharing: Independent Apps (own menu+login) · Intranet (own menu, same login) · Portal (common menu+login)</li>
+          </ul>
+
+          <h3>Process &amp; Odds &amp; Ends</h3>
+          <ul>
+            <li>Design process: <b>Disclose → Organize → Assemble</b></li>
+            <li>ISO 25010:2011 = ISO 9126:1991 + <b>Security</b> + <b>Compatibility</b></li>
+            <li>Modular programming benefits: Abstraction, Isolation, Complexity mgmt, Teamwork</li>
+            <li>Passing score: <b>70%</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MNEMONICS VIEW ============ -->
+  <section class="view" id="view-mnemo">
+    <div class="section-head">
+      <h2>Memory Tricks</h2>
+      <p>Silly sticks better than accurate. Use whichever phrase actually lodges in your brain.</p>
+    </div>
+    <div class="mnemo-grid" id="mnemo-grid"></div>
+  </section>
+
+  <!-- ============ PODCAST / LISTEN VIEW ============ -->
+  <section class="view" id="view-podcast">
+    <div class="section-head">
+      <h2>Listen While You're On Your Way</h2>
+      <p>Narrated with your device's built-in text-to-speech — no audio files, works fully offline once this page is open. Best in Chrome, Edge, or Safari.</p>
+    </div>
+    <div id="podcast-unsupported" class="podcast-warning">Your browser doesn't support speech synthesis, so audio playback isn't available here. Try opening this file in Chrome, Edge, or Safari.</div>
+    <div id="podcast-app">
+      <div class="podcast-layout">
+        <div class="podcast-episodes" id="podcast-episode-list"></div>
+        <div class="podcast-player">
+          <div class="pod-now-playing" id="pod-ep-title">Episode 1</div>
+          <div class="podcast-transcript" id="pod-transcript"></div>
+          <div class="podcast-progress"><div class="podcast-progress-bar" id="pod-progress-bar"></div></div>
+          <div class="podcast-controls">
+            <button class="pod-btn" id="pod-prev" title="Previous line">⏮</button>
+            <button class="pod-btn big" id="pod-playpause" title="Play/Pause">▶</button>
+            <button class="pod-btn" id="pod-next" title="Next line">⏭</button>
+            <button class="pod-btn" id="pod-stop" title="Restart episode">⏹</button>
+          </div>
+          <div class="podcast-settings">
+            <label>Speed
+              <select id="pod-rate">
+                <option value="0.8">0.8×</option>
+                <option value="0.9">0.9×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.15">1.15×</option>
+                <option value="1.3">1.3×</option>
+              </select>
+            </label>
+            <label>Voice <select id="pod-voice"></select></label>
+            <label class="pod-check"><input type="checkbox" id="pod-autoadvance" checked> Auto-play next episode</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="appfoot">Made for Nina's OutSystems Architecture exam · everything runs locally in this file, no internet needed · good luck tomorrow 🍀</footer>
+</div>
+
+<script>
+/* ================= DATA ================= */
+
+const flashcards = [
+  {topic:"Canvas", front:"What are the 3 layers of the Architecture Canvas, top to bottom?", back:"End-User → Core → Foundation. Lower layers never reference upward."},
+  {topic:"Canvas", front:"What does the End-user layer expose to the outside?", back:"User Interfaces and Processes — it's the layer intranet/extranet users interact with."},
+  {topic:"Canvas", front:"What does the Core layer expose to external consumers?", back:"APIs (plus internal Core services used by End-user modules)."},
+  {topic:"Canvas", front:"What does the Foundation layer provide?", back:"Integration services (to external producers/corporate DB) and Non-Functional Requirements (NFRs)."},
+  {topic:"Canvas", front:"Why use the Architecture Canvas? (3 reasons)", back:"Promotes abstraction of reusable services, optimizes lifecycle independence, minimizes impact of changes."},
+  {topic:"Canvas", front:"ISO/IEC 25010:2011 vs ISO/IEC 9126:1991 — what's new?", back:"25010 adds Security and Compatibility to 9126's Usability, Functionality, Efficiency, Maintainability, Portability, Reliability."},
+  {topic:"Canvas", front:"What is Modular Programming?", back:"A design technique that separates each functionality of an app into a different module."},
+  {topic:"Canvas", front:"4 benefits of Modular Programming?", back:"Abstraction, Isolation, Complexity management (divide & conquer), Teamwork (parallel work without conflicts)."},
+
+  {topic:"Naming", front:"Core module suffixes (6)", back:"_CS (Core Service), _BL (Business Logic), _CW (Core Widgets), _Eng (Calculation Engine), _Sync (Sync module), _API (exposes API to external consumers)."},
+  {topic:"Naming", front:"Foundation module suffixes (6)", back:"_Lib (generic library), _IS (Integration Service), _Drv (Driver), _Th (Theme), _Pat (UI Patterns), _Plug (Plugin)."},
+  {topic:"Naming", front:"How do you mark a module as mobile-only in naming conventions?", back:"Add an 'M' — e.g. _MTh or _MPat."},
+  {topic:"Naming", front:"Why adopt naming conventions at all? (3 reasons)", back:"Reveal the nature of each module, enforce the reference architecture, normalize known patterns."},
+
+  {topic:"Patterns", front:"What are the 3 parts of the Integration Pattern?", back:"Core Service (system-agnostic, extends original service) → Integration Service (abstracts the API, hides integration type) → External System(s)."},
+  {topic:"Patterns", front:"Direct Integration — benefit and challenges?", back:"Benefit: data always up to date. Challenges: more hits on external system, more latency, more APIs (one per retrieval use case)."},
+  {topic:"Patterns", front:"Local Replica — benefits and challenge?", back:"Benefits: less impact on external system, simpler API, enables data mashup, promotes RAD. Challenge: needs a sync strategy."},
+  {topic:"Patterns", front:"When should you use a Transparency Service?", back:"When there's more than one external source/driver for the same concept and you need to normalize/mashup data from them."},
+  {topic:"Patterns", front:"Extension Pattern — two use cases?", back:"Wrap an external library, or wrap entities from an external database."},
+  {topic:"Patterns", front:"What does 'Integration Services Granularity' recommend?", back:"Split a giant Integration Service for a large API into smaller, function-area-specific ISs (e.g. SAP_IS → SAP_Fin_IS, SAP_HR_IS, SAP_MM_IS) to avoid a single bottleneck."},
+  {topic:"Patterns", front:"Core Entity Pattern — how is it implemented?", back:"Expose entities read-only; create public CRUD server actions to centralize business logic; read data via queries or the Get Entity action."},
+  {topic:"Patterns", front:"What's a Business Logic (_BL) module for?", back:"Reacting to business events / orchestrating a composite process that spans multiple Core Service modules."},
+  {topic:"Patterns", front:"Sync Patterns — what should sync logic be isolated from?", back:"The Core Service — so consumers aren't affected by sync, and one Sync module can orchestrate several Core Services."},
+  {topic:"Patterns", front:"Batch Sync — pros and con?", back:"Pros: simpler API, mashup, less impact, CS consumers unaffected. Con: data may be outdated."},
+  {topic:"Patterns", front:"Real-time Sync — pros and cons?", back:"Pros: same as batch plus always up to date. Cons: more inter-system dependency, external system must support callbacks (pub/sub)."},
+  {topic:"Patterns", front:"In the Real-time Sync + ESB variant, who publishes and who subscribes?", back:"The Integration Service publishes changes to the bus; the ERP subscribes to the bus (and can also publish); the Core Service's API subscribes to ERP-published changes."},
+
+  {topic:"Modules", front:"Typical elements of a Foundation module?", back:"Data (structures, non-core entities), Logic (normalized APIs, exception handling, SSO/session), Interface (UI patterns/themes). No Processes."},
+  {topic:"Modules", front:"Typical elements of a Core module?", back:"Data (read-only core entities), Logic (CRUD, audit, roles), Interface (business blocks), Processes (async data processing)."},
+  {topic:"Modules", front:"Typical elements of an End-User module?", back:"Data (auxiliary/temp), Logic (use-case-specific, not reused), Interface (role-based UI), Processes (workflow definitions)."},
+
+  {topic:"Validation", front:"Validation Rule 1 for modules?", back:"No Upward References — a module can't reference a module in a layer above it."},
+  {topic:"Validation", front:"Validation Rule 2 for modules?", back:"No Side References Between End-User modules — BUT screen references between End-User modules ARE allowed."},
+  {topic:"Validation", front:"Validation Rule 3 for modules?", back:"No Circular References — no dependency loops between modules."},
+  {topic:"Validation", front:"What happens if End-User module 2 references End-User module 1 which uses Core 1, Core 2, Foundation 1?", back:"End-User 2 becomes dependent on the whole cluster — this is exactly why Rule 1/2 matter for keeping change impact contained."},
+  {topic:"Validation", front:"Validation Rule 1 for Applications?", back:"Layer your modules correctly."},
+  {topic:"Validation", front:"Validation Rule 2 for Applications?", back:"Layer applications correctly — an application's layer is defined by the highest (most upward) layer module it contains."},
+  {topic:"Validation", front:"Validation Rule 3 for Applications?", back:"Don't Mix Owners — if consumers from a different owner depend on your module, split the module or promote ownership."},
+  {topic:"Validation", front:"Validation Rule 4 for Applications?", back:"Don't Mix Sponsors — different lines of business move at different paces; each LOB should be deployable independently, sharing only common services."},
+  {topic:"Validation", front:"What is Discovery?", back:"A visual tool to analyze, measure, and understand how to improve your architecture (layers, dependencies, rules, applications)."},
+  {topic:"Validation", front:"What is AI Mentor?", back:"AI-based dev & quality analysis tooling — Code Analysis (performance, security, architecture, maintainability) + Runtime Performance Analysis."},
+
+  {topic:"Refactoring", front:"Refactoring prioritization criteria, in order?", back:"1) Upper/side refs to End-user modules 2) Direct cycles between Core modules 3) Upper refs to Core modules 4) Direct cycles between Foundation modules."},
+  {topic:"Refactoring", front:"Within one prioritization criterion, which module do you fix first?", back:"The one with the most consumers — it resolves the most findings at once."},
+  {topic:"Refactoring", front:"Extract a Core — the 6-step recap?", back:"1. Identify consumed elements 2. Clone the module 3. Rename original to (Name)_CS 4. Clone keeps the original name 5. Keep consumed elements+deps in the new Core, remove them from the clone 6. Reference the new Core module."},
+  {topic:"Refactoring", front:"Extract a Core — what happens to consumers/URLs?", back:"They're unaffected — the clone keeps the original module's name and URLs."},
+  {topic:"Refactoring", front:"Which elements can be moved between modules with no data-persistency worries?", back:"Actions, Structures, Blocks, Screens — just watch out for their consumers."},
+  {topic:"Refactoring", front:"Which 'configurable elements' need special care when moving modules?", back:"Timers (schedule properties), Site Properties (effective value), Web Services/References (endpoint/URL may change), Roles (user↔role relations)."},
+  {topic:"Refactoring", front:"Moving a BPT Process to another module — the steps?", back:"Copy the process to the target module → untrigger the old process (old instances keep running, no new ones start) → deploy to all environments → once all old instances finish, delete the old process."},
+  {topic:"Refactoring", front:"Moving Entities — the Refactor Component recap (5 steps)?", back:"1. Copy Entity to target module 2. Run Refactor component to populate it there 3. Full compile with all target modules (no reference changes yet) 4. Update the reference 5. Publish."},
+  {topic:"Refactoring", front:"What's the 'Most Common Use Case' the course warns about?", back:"End-user modules providing services to other End-user modules — denormalized for parallel fetching — which leads to hard maintainability, slow evolution, large footprints, slow deployments."},
+
+  {topic:"Mobile", front:"3 top Mobile Architecture principles?", back:"Think Lazy Load, Use Local Storage, Avoid Server Calls."},
+  {topic:"Mobile", front:"Order of mobile screen lifecycle events?", back:"OnInitialize → OnReady → OnRender → OnAfterFetch → (OnParametersChanged, for Blocks) → OnDestroy."},
+  {topic:"Mobile", front:"What does OnInitialize do, and what should you avoid doing there?", back:"Occurs before navigating to the screen and fetching data — avoid using it (or any single event handler) to fetch all your data; prefer parallel/on-demand fetching."},
+  {topic:"Mobile", front:"'Lightweight Local Storage' — what should you avoid?", back:"Don't copy the server data model 1:1 — define only used attributes, denormalize, and don't store more records than needed."},
+  {topic:"Mobile", front:"When should you use server calls on mobile?", back:"Online transactions, synchronization processes, and accessing/storing sensitive information."},
+  {topic:"Mobile", front:"3 problems with calling backend systems directly from mobile?", back:"Security (exposes internal services), Performance (can't cache/optimize server-side), Maintainability (harder to maintain)."},
+  {topic:"Mobile", front:"Sync best practices on mobile?", back:"Use entity bulk operations, sync only differences (timestamps), sync only relevant records/attributes, avoid long syncs in one transaction, don't sync on every screen."},
+  {topic:"Mobile", front:"Correct Theme Architecture rule?", back:"Avoid CSS in Blocks or Screens — CSS should live only in the Theme, to reduce loaded resources and protect performance."},
+  {topic:"Mobile", front:"What does SSL Pinning protect against?", back:"Man-in-the-middle attacks — it verifies the server certificate client-side over HTTPS."},
+
+  {topic:"Style Guides", front:"4 components of Style Guide Architecture?", back:"Theme (CSS styles/classes), Patterns (reusable UI components), Template (layouts/menu/login + theme reference), Live Style Guide (visual example of it all)."},
+  {topic:"Style Guides", front:"Specialize vs Clone a built-in Style Guide?", back:"Specialize = Custom Theme references the Base Theme (inherits updates, slightly slower). Clone = Custom Theme copies the Base Theme (best performance, no auto-updates)."},
+  {topic:"Style Guides", front:"When would you Build Your Own custom Style Guide?", back:"When the custom style guide can't benefit from any existing theme — still clone the Base Template and start from the OutSystems UI Base Theme for minimum structure."},
+  {topic:"Style Guides", front:"3 scenarios for sharing a Style Guide?", back:"Independent Apps (own menu & login), Intranet (own menu, same login flow), Portal (common menu & login flow)."},
+
+  {topic:"General", front:"3-step Architecture Design Process?", back:"Disclose → Organize → Assemble."},
+  {topic:"General", front:"Passing score for OutSystems Specialization exams?", back:"70% or above."},
+  {topic:"General", front:"Key Architect responsibilities?", back:"Design/validate architecture, translate business requirements into scalable apps, ensure lifecycle independence, recommend patterns, promote reusability, identify NFRs, assess performance."},
+  {topic:"General", front:"What is an Application in OutSystems?", back:"A set of modules defined in Service Studio that forms the minimal deployment unit for LifeTime."}
+];
+
+const TOPICS = ["All", ...new Set(flashcards.map(c=>c.topic))];
+
+/* ---- SVG diagram helpers for diagram-based scenario questions ---- */
+function dBox(x,y,w,h,label,sub,colorVar,textColor){
+  textColor = textColor || '#fff';
+  const subLine = sub ? `<text x="${x+w/2}" y="${y+h/2+17}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9.5" fill="${textColor}" opacity="0.88">${sub}</text>` : '';
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="${colorVar}" stroke="#1b1f2a" stroke-width="1.6"/>
+    <text x="${x+w/2}" y="${y+h/2+(sub?-1:5)}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="${textColor}">${label}</text>
+    ${subLine}`;
+}
+function dArrow(x1,y1,x2,y2,color,dashed,label){
+  color = color || '#1b1f2a';
+  const mid = {x:(x1+x2)/2, y:(y1+y2)/2};
+  const lbl = label ? `<rect x="${mid.x-((label.length*3.6)/2)-4}" y="${mid.y-9}" width="${label.length*3.6+8}" height="14" fill="#f3ede0" opacity="0.92"/><text x="${mid.x}" y="${mid.y+2}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9.5" font-weight="700" fill="${color}">${label}</text>` : '';
+  const markerRef = color.indexOf('a3312a')>=0 ? 'url(#arr-red)' : 'url(#arr-black)';
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.2" ${dashed?'stroke-dasharray="6,5"':''} marker-end="${markerRef}"/>${lbl}`;
+}
+function dWrap(viewBoxW, viewBoxH, inner){
+  return `<div class="diagram-box"><svg viewBox="0 0 ${viewBoxW} ${viewBoxH}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr-black" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#1b1f2a"/></marker>
+      <marker id="arr-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#a3312a"/></marker>
+    </defs>
+    ${inner}
+  </svg>
+  <div class="diagram-legend"><span><i style="background:var(--enduser-blue)"></i>End-user</span><span><i style="background:var(--core-orange)"></i>Core</span><span><i style="background:var(--foundation-green)"></i>Foundation</span><span><i style="background:var(--ext-grey)"></i>External</span></div>
+  </div>`;
+}
+const RED = '#a3312a';
+
+const quizQuestions = [
+  // ---------- DEFINITIONS ----------
+  {cat:"Definitions", q:"What is the Architecture Canvas?", opts:[
+    "A framework to support application architecture design in OutSystems",
+    "A Style Guide for theming Reactive apps",
+    "A performance monitoring dashboard",
+    "A database schema design tool"
+  ], correct:0, explain:"The Architecture Canvas organizes modules into End-user, Core, and Foundation layers to make architecture design simple and consistent."},
+  {cat:"Definitions", q:"What is an Integration Pattern?", opts:[
+    "A UI layout template for forms",
+    "Best practices to integrate with an external system and abstract that integration from other modules",
+    "A database indexing strategy",
+    "A naming convention for mobile apps"
+  ], correct:1, explain:"Integration Patterns wrap an external system behind a Core Service + Integration Service pair so consumers never talk to the external system directly."},
+  {cat:"Definitions", q:"What defines the Core Entity Pattern?", opts:[
+    "Entities are hidden entirely from other modules",
+    "Entities are exposed as read-only, with public CRUD actions centralizing the logic to change them",
+    "Entities are duplicated in every consuming module",
+    "Entities can only be modified via direct SQL"
+  ], correct:1, explain:"Expose the entity read-only; create public Create/Update/Delete server actions so all changes flow through controlled logic."},
+  {cat:"Definitions", q:"What's the purpose of a Business Logic (_BL) module?", opts:[
+    "To store UI themes",
+    "To orchestrate/react to business events across multiple Core Service modules",
+    "To hold only database entities",
+    "To replace the need for Core Services entirely"
+  ], correct:1, explain:"A _BL module supports composite processes that touch more than one Core Service (e.g. Customer_BL depending on Contract_CS and Customer_CS)."},
+  {cat:"Definitions", q:"What is Discovery, in the context of Architecture Validation Tools?", opts:[
+    "A code editor for Service Studio",
+    "A visual tool to analyze, measure, and understand how to improve your architecture",
+    "A load-testing tool",
+    "A CI/CD pipeline runner"
+  ], correct:1, explain:"Discovery visualizes canvas layers, module dependencies, rule violations, and applications."},
+  {cat:"Definitions", q:"What is AI Mentor?", opts:[
+    "A chatbot for end users",
+    "A set of AI-based development and quality analysis tools supporting the dev lifecycle (code + runtime performance analysis)",
+    "A recruiting tool for OutSystems architects",
+    "A mobile-only debugging console"
+  ], correct:1, explain:"AI Mentor covers Code Analysis (performance, security, architecture, maintainability) and Runtime Performance Analysis, aimed at architects, team leads, and developers."},
+  {cat:"Definitions", q:"What is a 'Live Style Guide'?", opts:[
+    "A static PDF brand document",
+    "Live documentation showcasing the brand theme, colors, and patterns in action",
+    "A version control branch",
+    "A load balancer configuration"
+  ], correct:1, explain:"It's a running example of the patterns and look-and-feel — not just a document."},
+  {cat:"Definitions", q:"What is an Application in OutSystems terms?", opts:[
+    "A single Screen",
+    "A set of modules defined in Service Studio that forms the minimal deployment unit for LifeTime",
+    "A Foundation-layer library only",
+    "A user role definition"
+  ], correct:1, explain:"An application groups modules together as the smallest thing you can deploy via LifeTime."},
+  {cat:"Definitions", q:"What does the Extension Pattern let you do?", opts:[
+    "Wrap an external library, or wrap entities from an external database",
+    "Add extra screens to an End-user module",
+    "Extend a Theme with new colors only",
+    "Duplicate a Core Service"
+  ], correct:0, explain:"Extension pattern is a Foundation-layer pattern for wrapping a .NET/Java library or external DB entities behind a clean interface."},
+  {cat:"Definitions", q:"What does 'Transparency Service' mean in Integration Patterns?", opts:[
+    "A publicly documented API with no authentication",
+    "An Integration Service that normalizes/mashes-up data from multiple external sources via different Driver modules",
+    "A UI pattern showing loading spinners",
+    "A logging service for audit trails"
+  ], correct:1, explain:"Used when more than one external source represents the same concept (e.g. ERP1, ERP2, SaaS for different regions)."},
+  {cat:"Definitions", q:"What does SSL Pinning do?", opts:[
+    "Speeds up mobile app startup time",
+    "Adds extra HTTPS security by verifying the server certificate client-side, preventing man-in-the-middle attacks",
+    "Pins a mobile app icon to the home screen",
+    "Caches SSL certificates in Local Storage permanently"
+  ], correct:1, explain:"It's a client-side plugin-based check against MITM attacks — not a performance feature."},
+  {cat:"Definitions", q:"What does 'Local Replica' mean as an Integration Pattern variation?", opts:[
+    "Storing a full offline copy of the entire external system's database",
+    "The Core Service holds Entities with a subset of the external system's data, kept in sync by a Sync module",
+    "A backup server for disaster recovery",
+    "A UI component library"
+  ], correct:1, explain:"Local Replica caches a subset of external data locally, trading perfect freshness for lower external-system impact."},
+
+  // ---------- KEY CONCEPTS ----------
+  {cat:"Key Concepts", q:"Which ISO standard update added Security and Compatibility as quality characteristics?", opts:[
+    "ISO/IEC 9126:1991",
+    "ISO/IEC 25010:2011",
+    "ISO/IEC 27001",
+    "ISO/IEC 12207"
+  ], correct:1, explain:"9126:1991 had 6 characteristics; 25010:2011 added Security and Compatibility for a total of 8."},
+  {cat:"Key Concepts", q:"List the 3 layers of the Architecture Canvas from top to bottom.", opts:[
+    "Core, Foundation, End-user",
+    "End-user, Core, Foundation",
+    "Foundation, End-user, Core",
+    "Presentation, Business, Data"
+  ], correct:1, explain:"End-user is on top (closest to users), Foundation is at the bottom (closest to external systems)."},
+  {cat:"Key Concepts", q:"What does the naming suffix _Drv typically indicate?", opts:[
+    "A Core-layer driver license validation module",
+    "A Foundation-layer Driver module — one implementation behind a Transparency Service",
+    "A database driver installed on the server",
+    "A deprecated module marked for deletion"
+  ], correct:1, explain:"Driver modules (_Drv) implement one of several possible sources behind a Transparency Service's Integration Service."},
+  {cat:"Key Concepts", q:"What does the naming suffix _Eng indicate?", opts:[
+    "An English-language localization module",
+    "A Core-layer Calculation Engine module for complex calculations",
+    "An Engineering team's sandbox module",
+    "A Foundation-layer external system"
+  ], correct:1, explain:"_Eng modules perform complex calculation logic at the Core layer."},
+  {cat:"Key Concepts", q:"Which modules get an 'M' added to their suffix, like _MTh or _MPat?", opts:[
+    "Any module owned by the Marketing team",
+    "Mobile-only versions of Theme or Pattern modules",
+    "Modules pending migration",
+    "Modules with multiple owners"
+  ], correct:1, explain:"The 'M' flags a mobile-specific variant of a Foundation Theme/Pattern module."},
+  {cat:"Key Concepts", q:"What are the two named variations of the Integration Pattern?", opts:[
+    "Sync and Async",
+    "Direct Integration and Local Replica",
+    "Batch and Real-time",
+    "Public and Private"
+  ], correct:1, explain:"Direct Integration always calls through live; Local Replica caches a subset of data locally."},
+  {cat:"Key Concepts", q:"What's the core trade-off between Direct Integration and Local Replica?", opts:[
+    "Direct Integration is always cheaper to build",
+    "Direct Integration keeps data always fresh but costs more hits/latency; Local Replica reduces external impact but needs a sync strategy",
+    "Local Replica requires no Integration Service at all",
+    "There is no meaningful trade-off between them"
+  ], correct:1, explain:"This is the central decision point covered in 'How do we Decide?' throughout the patterns modules."},
+  {cat:"Key Concepts", q:"When should you reach for a Transparency Service?", opts:[
+    "When there's exactly one external system to integrate with",
+    "When there's more than one external source/system representing the same business concept",
+    "When you need to expose a public REST API",
+    "When you want to avoid using Core Services altogether"
+  ], correct:1, explain:"Per the 'How do we Decide?' flow: if more than one source exists for the same concept, use a Transparency Service."},
+  {cat:"Key Concepts", q:"What are the 3 reasons given for why the Architecture Canvas matters?", opts:[
+    "Faster typing, fewer bugs, prettier UI",
+    "Promotes abstraction of reusable services, optimizes lifecycle independence, minimizes impact of changes",
+    "Reduces licensing costs, improves SEO, increases uptime",
+    "Simplifies login flows, improves branding, reduces server count"
+  ], correct:1, explain:"These three benefits are repeated for both 'Why use the Canvas' and 'Why Validate an Architecture'."},
+  {cat:"Key Concepts", q:"What 4 benefits does Modular Programming provide?", opts:[
+    "Speed, Cost, Scale, Security",
+    "Abstraction, Isolation, Complexity management, Teamwork",
+    "Portability, Usability, Reliability, Efficiency",
+    "Caching, Compression, Encryption, Logging"
+  ], correct:1, explain:"Abstraction hides implementation; Isolation eases testing/maintenance; Complexity management breaks big problems into small ones; Teamwork enables parallel work."},
+  {cat:"Key Concepts", q:"In the 3-step Architecture Design Process, what comes right after 'Disclose'?", opts:[
+    "Deploy",
+    "Organize",
+    "Assemble",
+    "Validate"
+  ], correct:1, explain:"Order is Disclose → Organize → Assemble."},
+  {cat:"Key Concepts", q:"What's the minimum passing score for OutSystems Specialization exams?", opts:[
+    "50%",
+    "60%",
+    "70%",
+    "80%"
+  ], correct:2, explain:"Stated explicitly in both the Course Overview and Course Wrap-up decks: 70% or above."},
+  {cat:"Key Concepts", q:"Put the mobile screen lifecycle events in order.", opts:[
+    "OnRender → OnInitialize → OnReady → OnDestroy",
+    "OnInitialize → OnReady → OnRender → OnAfterFetch → OnDestroy",
+    "OnDestroy → OnReady → OnInitialize → OnRender",
+    "OnAfterFetch → OnInitialize → OnDestroy → OnReady"
+  ], correct:1, explain:"OnInitialize occurs before navigation/fetch; OnReady after DOM is ready; OnRender after OnReady and on every data change; OnAfterFetch after data is fetched, before render; OnDestroy at teardown."},
+  {cat:"Key Concepts", q:"Which document/tool references a Base Theme without copying it?", opts:[
+    "Cloning a Style Guide",
+    "Specializing a Style Guide",
+    "Building your own Style Guide from scratch",
+    "The Live Style Guide"
+  ], correct:1, explain:"Specializing keeps a live reference to the Base Theme (inherits future changes); Cloning copies it (no auto-inheritance, better performance)."},
+  {cat:"Key Concepts", q:"What are the two Style Guide sharing scenarios besides 'Independent Apps'?", opts:[
+    "Sandbox and Production",
+    "Intranet and Portal",
+    "Public and Private",
+    "Mobile and Web"
+  ], correct:1, explain:"Independent Apps (own menu & login), Intranet (own menu, shared login flow), Portal (shared menu & login)."},
+
+  // ---------- SCENARIO-BASED ----------
+  {cat:"Scenario", q:"A Core module directly calls a server action that lives in an End-User module. Which rule is broken?", opts:[
+    "Rule 3 — No Circular References",
+    "Rule 1 — No Upward References",
+    "Rule 2 — No Side References",
+    "No rule is broken; this is fine"
+  ], correct:1, explain:"Core is below End-user; a Core module calling upward into an End-user module violates Rule 1."},
+  {cat:"Scenario", q:"Two End-User modules call each other's server-side actions directly (not just screen references). What's violated?", opts:[
+    "Rule 1 — No Upward References",
+    "Rule 2 — No Side References between End-User modules",
+    "Nothing — side references are always fine",
+    "Rule 4 — Don't Mix Sponsors"
+  ], correct:1, explain:"Screen references between End-user modules are the one allowed exception — server-side action references are not."},
+  {cat:"Scenario", q:"Module A references Module B, B references Module C, and C references back to A. Which rule catches this?", opts:[
+    "Rule 2 — No Side References",
+    "Rule 1 — No Upward References",
+    "Rule 3 — No Circular References",
+    "Rule 4 — Don't Mix Owners"
+  ], correct:2, explain:"A closed loop of dependencies is a circular reference regardless of which layer the modules sit in."},
+  {cat:"Scenario", q:"An application bundles one End-user module together with several Core modules. What layer is the Application classified as?", opts:[
+    "Foundation App",
+    "Core App",
+    "End-User App",
+    "It has no single layer — layering only applies to modules"
+  ], correct:2, explain:"Per 'Define the Layer of an Application', the app's layer equals the highest (most upward) layer of any module it contains."},
+  {cat:"Scenario", q:"Team A's module is being consumed by an app owned by Team B. What does the validation guidance recommend?", opts:[
+    "Ignore it — ownership doesn't matter for validation",
+    "Split the module or promote ownership so consumers don't mix owners",
+    "Immediately delete the module",
+    "Merge both teams into one team"
+  ], correct:1, explain:"Rule 3 for Applications — Don't Mix Owners — recommends splitting the module or promoting/transferring ownership."},
+  {cat:"Scenario", q:"Two lines of business share one Core module but want to deploy on independent schedules. What's the issue and fix?", opts:[
+    "This is fine as-is, no changes needed",
+    "Don't Mix Sponsors — each line of business should have its own suite, sharing only common services, so it can deploy independently",
+    "This is a Rule 1 (Upward References) violation",
+    "Solve it by adding more servers"
+  ], correct:1, explain:"Rule 4 — Don't Mix Sponsors — different sponsors/LOBs need independent deployability; keep only truly common logic shared."},
+  {cat:"Scenario", q:"You must add a Core layer under an existing module without breaking any existing consumer URLs. What's the technique?", opts:[
+    "Extracting a Core: clone the module, rename the original to (Name)_CS, keep the clone with the original name referencing the new Core",
+    "Delete the module and rebuild it from scratch",
+    "Manually update every consumer's URL",
+    "Move the module to the Foundation layer"
+  ], correct:0, explain:"The clone keeps the original name/URL so consumers are unaffected; the renamed original becomes the new _CS module."},
+  {cat:"Scenario", q:"You're moving a BPT process to a new module, and some instances are currently in-flight. What's the safe sequence?", opts:[
+    "Delete the old process immediately, then create it fresh in the new module",
+    "Copy the process to the target module, untrigger the old one so in-flight instances finish but no new ones start, deploy everywhere, then delete the old process once drained",
+    "Pause the entire environment until all instances finish",
+    "Force-cancel all in-flight instances before moving anything"
+  ], correct:1, explain:"This avoids losing in-flight work while still cutting over new instances to the new module."},
+  {cat:"Scenario", q:"You need to move an Entity (with its data) to another module across environments with minimal manual rework. What should you use?", opts:[
+    "Manually export/import the database table",
+    "The Refactor component: copy entity → run Refactor → full compile → update reference → publish",
+    "Delete and recreate the entity in the new module",
+    "Rename the entity and hope references auto-update"
+  ], correct:1, explain:"The Refactor component is purpose-built to move entities (and roles, site properties) between modules and sync target environments."},
+  {cat:"Scenario", q:"An Integration Service wraps hundreds of APIs and structures for a single huge external system (e.g. SAP). What's the architectural concern and fix?", opts:[
+    "No concern — bigger Integration Services are always better",
+    "Poor Integration Services Granularity — split into smaller, function-area-specific ISs (e.g. SAP_Fin_IS, SAP_HR_IS, SAP_MM_IS)",
+    "This should instead become a Core Widget",
+    "This violates the No Circular References rule"
+  ], correct:1, explain:"A single giant IS becomes a bottleneck affecting too many consumers — splitting by function area balances granularity."},
+  {cat:"Scenario", q:"A mobile screen feels sluggish because all its data is fetched inside the OnInitialize event before navigation completes. What principle is violated?", opts:[
+    "Avoid Server Calls",
+    "Think Lazy Loading — avoid fetching everything in event handlers before render; fetch on demand / in parallel instead",
+    "Correct Theme Architecture",
+    "Don't Mix Sponsors"
+  ], correct:1, explain:"Lazy Loading calls for event-driven, parallel data fetching rather than blocking navigation on a big upfront fetch."},
+  {cat:"Scenario", q:"A mobile app's Local Storage mirrors the server's entire relational schema, including unused columns and tables. What's wrong?", opts:[
+    "Nothing — mirroring the server schema is best practice",
+    "Violates 'Lightweight Local Storage' — should denormalize and store only the attributes/records actually needed",
+    "This is required by the Core Entity Pattern",
+    "This violates the No Upward References rule"
+  ], correct:1, explain:"Local storage should be optimized per use case, not a 1:1 copy of the server data model."},
+  {cat:"Scenario", q:"A developer writes custom CSS directly inside a Block instead of the Theme. What's the concern?", opts:[
+    "None — CSS location doesn't matter",
+    "Violates Correct Theme Architecture — CSS should be limited to the Theme to reduce loaded resources and protect performance",
+    "This violates the Extension Pattern",
+    "This is a Rule 3 (Circular References) issue"
+  ], correct:1, explain:"CSS in Blocks/Screens impacts performance and defeats the point of centralizing look-and-feel in the Theme."},
+  {cat:"Scenario", q:"You want to make small branding tweaks to OutSystems UI and keep getting future OutSystems UI updates automatically. Which approach fits?", opts:[
+    "Clone the built-in Style Guide",
+    "Specialize the built-in Style Guide (reference the Base Theme)",
+    "Build your own Style Guide from scratch",
+    "Don't use a Style Guide at all"
+  ], correct:1, explain:"Specializing keeps a live reference to the base theme, so it inherits new changes — the trade-off is slightly lower performance."},
+  {cat:"Scenario", q:"You need maximum runtime performance and heavy, permanent customization, and don't mind missing future base-theme updates. Which approach fits?", opts:[
+    "Specialize the built-in Style Guide",
+    "Clone the built-in Style Guide",
+    "Reference three different themes simultaneously",
+    "Use only inline styles on every screen"
+  ], correct:1, explain:"Cloning copies the base theme so there's no extra indirection — best performance, but no automatic inheritance of updates."},
+
+  // ---------- LIKELY EXAM ----------
+  {cat:"Likely Exam", q:"Which layer should generally avoid exposing Core-type (business) entities?", opts:[
+    "End-User layer",
+    "Foundation layer",
+    "Core layer",
+    "All layers expose Core entities equally"
+  ], correct:1, explain:"One of the additional recommendations in the module validation rules: Foundation shouldn't hold/expose Core-style entities."},
+  {cat:"Likely Exam", q:"True or False: Screen references between two End-User modules are forbidden by Rule 2.", opts:[
+    "True — all references between End-User modules are forbidden",
+    "False — screen references are explicitly allowed; it's server-side/action references that are restricted",
+    "True, but only for mobile apps",
+    "False — Rule 2 doesn't apply to End-User modules at all"
+  ], correct:1, explain:"Rule 2 restricts side references between End-user modules, but explicitly allows screen references as an exception."},
+  {cat:"Likely Exam", q:"What are the first two refactoring prioritization criteria, in order?", opts:[
+    "Direct cycles in Foundation, then upper refs to Core",
+    "Upper/side refs to End-user modules, then direct cycles between Core modules",
+    "Upper refs to Core, then direct cycles in End-user modules",
+    "Don't Mix Owners, then Don't Mix Sponsors"
+  ], correct:1, explain:"Full order: 1) Upper/side refs to End-user modules 2) Direct cycles between Core 3) Upper refs to Core 4) Direct cycles between Foundation."},
+  {cat:"Likely Exam", q:"When multiple modules tie for the same refactoring priority tier, which do you fix first?", opts:[
+    "The oldest module",
+    "The one with the most consumers",
+    "The smallest module by code size",
+    "Whichever module a manager picks at random"
+  ], correct:1, explain:"Fixing the module with the most consumers resolves the most findings for the least total effort."},
+  {cat:"Likely Exam", q:"Which OutSystems tool shows technical debt with a color-coded, per-application/module breakdown?", opts:[
+    "Discovery",
+    "AI Mentor",
+    "Service Center",
+    "LifeTime"
+  ], correct:1, explain:"AI Mentor Studio surfaces technical debt scores and color-coded quality analysis per app/module."},
+  {cat:"Likely Exam", q:"Which naming suffix indicates a Core-layer module that exposes an API specifically to external consumers?", opts:[
+    "_CS",
+    "_API",
+    "_IS",
+    "_Eng"
+  ], correct:1, explain:"_API is the Core-layer technical wrapper exposing functionality to consumers outside OutSystems."},
+  {cat:"Likely Exam", q:"What are the 4 typical elements of a Core module (per 'Typical Module Elements')?", opts:[
+    "Data, Logic, Interface, Processes",
+    "Data, Style, Security, Deployment",
+    "Entities, Themes, Plugins, Roles",
+    "UI, API, DB, Cache"
+  ], correct:0, explain:"Core modules have all four: Data (read-only entities), Logic (CRUD/audit/roles), Interface (business blocks), Processes (async)."},
+  {cat:"Likely Exam", q:"Why does the Foundation layer's typical elements list skip 'Processes', unlike Core and End-User?", opts:[
+    "Foundation modules are technically incapable of running Timers",
+    "Foundation exists for reusable low-level plumbing (integration, extensions, themes) rather than orchestrating business processes",
+    "Processes are only allowed in mobile apps",
+    "This is a documentation error — Foundation does have Processes as a typical element"
+  ], correct:1, explain:"Business process orchestration belongs to Core/End-user; Foundation focuses on technical/reusable concerns."},
+  {cat:"Likely Exam", q:"What's the main risk of choosing Direct Integration over Local Replica?", opts:[
+    "Data becomes stale quickly",
+    "More hits on the external system, more latency, and more APIs (one per retrieval use case)",
+    "You lose the ability to use Core Services",
+    "It requires an ESB no matter what"
+  ], correct:1, explain:"Direct Integration trades freshness for extra load/latency/API surface on the external system."},
+  {cat:"Likely Exam", q:"In the Real-time Sync + ESB variant, what is the correct publish/subscribe relationship?", opts:[
+    "The Core Service publishes directly to the ERP with no intermediary",
+    "The Integration Service publishes changes to the bus; the ERP subscribes to (and can publish to) the bus; the Core Service's API subscribes to ERP-published changes",
+    "The ERP publishes only, and never subscribes to anything",
+    "The bus is optional and can be skipped for real-time sync"
+  ], correct:1, explain:"The ESB decouples IS and ERP: both can publish, and each subscribes to the changes relevant to them."},
+  {cat:"Likely Exam", q:"Per the 'How do we Decide?' flow: if replicating data is OK, but there's more than one source for the same concept, which pattern applies?", opts:[
+    "Direct Integration",
+    "Batch Sync Summary",
+    "Transparency Service",
+    "Lazy Load Details"
+  ], correct:2, explain:"Multiple sources for the same concept is exactly the signal to introduce a Transparency Service on top of the replicas."},
+  {cat:"Likely Exam", q:"What topics does the Architecture Specialization exam explicitly say it covers?", opts:[
+    "Only OutSystems UI components",
+    "The Architecture Canvas, Patterns, Validation Rules, Mobile Architecture, and more (OutSystems UI, styles & themes)",
+    "Only database performance tuning",
+    "Only mobile plugin development"
+  ], correct:1, explain:"Per the Course Wrap-up: Architecture Canvas, Patterns, Validation Rules, Mobile Architecture and more, at 70%+ to pass."},
+  {cat:"Likely Exam", q:"What's the key difference between the module-level and application-level 'No Upward/Circular' style rules?", opts:[
+    "There is no application-level equivalent; only modules are validated",
+    "The same layering and circularity logic is re-applied one level up — at the Application layer instead of the Module layer",
+    "Application-level rules only apply to mobile apps",
+    "Application-level rules replace all module-level rules"
+  ], correct:1, explain:"Rules 1 and 2 for Applications ('layer modules correctly' / 'layer applications correctly') mirror the module-level upward/circular reference concerns, just scoped to whole applications."},
+
+  // ---------- MORE SCENARIO-BASED (exam-style, multi-step) ----------
+  {cat:"Scenario", q:"An architect is designing a new Order Management solution. Recall/Audit features need Product data, and so does the main storefront. Where should Product data live?", opts:[
+    "Duplicated inside both the Recall module and the Storefront module",
+    "In a Core Entity module (Product_CS) that both consume, with CRUD centralized in server actions",
+    "Inside a Foundation _Lib module",
+    "Inside whichever End-user module was built first"
+  ], correct:1, explain:"This is the textbook Core Entity Pattern: one authoritative Core Service, many End-user/Core consumers."},
+  {cat:"Scenario", q:"Your team discovers that Customer_BL currently has a reference back into an End-user checkout module to read a discount flag. What should happen?", opts:[
+    "Leave it — Business Logic modules are allowed to reference End-user modules",
+    "Remove the upward reference; move the shared logic/data down into Core so both Customer_BL and the End-user module depend on it downward",
+    "Move Customer_BL into the End-user layer permanently",
+    "Convert Customer_BL into a Foundation module"
+  ], correct:1, explain:"Core modules (including _BL) must never reference upward into End-user — shared concerns belong lower in the stack, referenced downward by both sides."},
+  {cat:"Scenario", q:"A new integration must talk to three different regional CRMs that all represent 'Customer' but with different schemas. Consumers just want one normalized Customer_CS. What should the Foundation layer contain?", opts:[
+    "One Integration Service directly calling all three CRMs inline inside Customer_CS",
+    "Three Driver modules (one per CRM) behind a single Integration Service that a Transparency layer selects from",
+    "Three separate Customer_CS modules, one per region",
+    "A single Extension module wrapping a generic .NET library"
+  ], correct:1, explain:"Multiple sources for the same concept is the signature use case for Transparency Services with per-source Driver modules."},
+  {cat:"Scenario", q:"During a technical debt review, AI Mentor flags a Core module with a high number of inbound dependencies from modules owned by three different teams. What's the most likely underlying issue?", opts:[
+    "The module is too well documented",
+    "Possible ownership/sponsor mixing — the shared module may need clearer ownership or splitting per Rule 3/4 for Applications",
+    "The module should be deleted immediately",
+    "This always indicates a circular reference"
+  ], correct:1, explain:"High fan-in across teams is exactly the smell that Don't-Mix-Owners / Don't-Mix-Sponsors guidance is meant to catch."},
+  {cat:"Scenario", q:"A developer wants to add a new Timer to handle nightly cleanup, and plans to build it inside an End-user module that already has heavy UI logic. What's the architectural concern?", opts:[
+    "None — Timers can only exist in End-user modules",
+    "Async/background processing is better isolated in a Core or Foundation module, keeping End-user modules focused on UI/workflow the user directly touches",
+    "Timers require their own dedicated Application",
+    "This will automatically violate Rule 3 (Circular References)"
+  ], correct:1, explain:"While not a hard rule violation by itself, mixing heavy UI concerns with background processing works against modular separation of concerns emphasized throughout the course."},
+  {cat:"Scenario", q:"You're about to move a Site Property from Module A to Module B using the Refactor tool. What extra care does the course recommend for Site Properties specifically?", opts:[
+    "None — Site Properties behave exactly like Structures when moved",
+    "Double-check the effective value/configuration in each environment after the move, since Site Property values are environment-specific",
+    "Site Properties can never be moved between modules",
+    "Site Properties automatically sync their value across all environments after refactor"
+  ], correct:1, explain:"Site Properties were specifically called out among the 'configurable elements' needing attention (schedule/config values don't just travel with the code)."},
+  {cat:"Scenario", q:"A Line of Business wants to release a new feature this Friday, but it depends on a shared Core module that another Line of Business is mid-refactor on, with a freeze in place. What does the refactoring guidance suggest was the process failure?", opts:[
+    "Refactoring freezes should never be communicated to other teams",
+    "Feature development on modules under refactor should be frozen and coordinated in advance so dependent teams aren't blocked unexpectedly",
+    "The Friday release should always take priority over refactoring",
+    "This scenario is impossible in OutSystems"
+  ], correct:1, explain:"The refactoring guidelines recommend freezing feature dev on modules being refactored — and, implicitly, coordinating with dependent teams."},
+  {cat:"Scenario", q:"A mobile app needs to let users browse a product catalog fully offline, including images and prices from last sync. What combination of principles applies?", opts:[
+    "Avoid Local Storage entirely for catalogs",
+    "Use Local Storage with a lightweight, denormalized schema, populated via a batch/local sync strategy, with lazy-loaded images",
+    "Always call the server live for every product view",
+    "Store the entire server database schema locally for completeness"
+  ], correct:1, explain:"Offline browsing combines Local Storage (lightweight/denormalized) with Lazy Loading — exactly the two mobile pillars beyond avoiding server calls."},
+  {cat:"Scenario", q:"An Integration Service for a large HR system currently exposes 200+ actions and structures in one module, and every consumer team complains about slow publishes. What's the recommended fix?", opts:[
+    "Ask consumers to publish less often",
+    "Apply Integration Services Granularity: split the module into smaller, function-area-specific Integration Services",
+    "Move all 200+ elements into a single End-user module instead",
+    "Convert the Integration Service into a Core Entity module"
+  ], correct:1, explain:"This is the SAP_IS → SAP_Fin_IS / SAP_HR_IS / SAP_MM_IS granularity example from the Foundation Patterns module, applied to HR."},
+  {cat:"Scenario", q:"Two Core Services need to share a piece of composite logic that reacts to changes in both, without either one referencing the other directly. What's the pattern?", opts:[
+    "Make Core Service A reference Core Service B directly",
+    "Introduce a Business Logic (_BL) module that references both Core Services and hosts the composite reaction logic",
+    "Duplicate the logic in both Core Services",
+    "Move the logic into the Foundation layer"
+  ], correct:1, explain:"This is precisely what the Business Logic Pattern is for — e.g. Customer_BL depending on both Contract_CS and Customer_CS."},
+
+  // ---------- DIAGRAM-BASED SCENARIOS ----------
+  {cat:"Diagram", q:"Look at the reference shown below. Which validation rule does this diagram illustrate a violation of?", opts:[
+    "Rule 2 — No Side References",
+    "Rule 1 — No Upward References",
+    "Rule 3 — No Circular References",
+    "No rule is violated"
+  ], correct:1, explain:"Foundation_1 sits below Core_1 in the Canvas, so a reference from Foundation up to Core breaks Rule 1 — No Upward References.",
+   diagram: dWrap(460,230,
+     dBox(160,30,140,55,'Core_1','(Core layer)','var(--core-orange)') +
+     dBox(160,150,140,55,'Foundation_1','(Foundation layer)','var(--foundation-green)') +
+     dArrow(230,150,230,85,RED,false,'references')
+   )},
+
+  {cat:"Diagram", q:"Two End-User modules are wired as shown, with the arrow representing a direct call to a server-side Action (not a screen link). What's the problem?", opts:[
+    "Nothing — any reference between End-user modules is fine",
+    "This violates Rule 1 — No Upward References",
+    "This violates Rule 2 — No Side References between End-User modules",
+    "This violates the Extension Pattern"
+  ], correct:2, explain:"Same-layer (side) references between End-user modules are restricted to screen references only — a direct Action call breaks Rule 2.",
+   diagram: dWrap(460,180,
+     dBox(50,60,150,55,'EndUser_A','(End-user)','var(--enduser-blue)') +
+     dBox(260,60,150,55,'EndUser_B','(End-user)','var(--enduser-blue)') +
+     dArrow(200,87,260,87,RED,false,'calls Action')
+   )},
+
+  {cat:"Diagram", q:"Same two modules, but this time the arrow represents a Screen reference (a link to a screen in the other module). Is this allowed?", opts:[
+    "No — all references between End-user modules are forbidden",
+    "Yes — screen references are the explicit exception to Rule 2",
+    "Only if both modules share the same owner",
+    "Only on mobile applications"
+  ], correct:1, explain:"Rule 2 blocks side references between End-user modules, but screen references are explicitly called out as allowed.",
+   diagram: dWrap(460,180,
+     dBox(50,60,150,55,'EndUser_A','(End-user)','var(--enduser-blue)') +
+     dBox(260,60,150,55,'EndUser_B','(End-user)','var(--enduser-blue)') +
+     dArrow(200,87,260,87,'#1b1f2a',false,'screen link')
+   )},
+
+  {cat:"Diagram", q:"Given the dependency loop shown (A → B → C → A, all Core modules), which rule applies?", opts:[
+    "Rule 1 — No Upward References",
+    "Rule 2 — No Side References",
+    "Rule 3 — No Circular References",
+    "Don't Mix Owners"
+  ], correct:2, explain:"A closed loop of dependencies — regardless of layer — is a circular reference, caught by Rule 3.",
+   diagram: dWrap(460,260,
+     dBox(160,20,140,50,'Core_A','','var(--core-orange)') +
+     dBox(40,170,140,50,'Core_B','','var(--core-orange)') +
+     dBox(280,170,140,50,'Core_C','','var(--core-orange)') +
+     dArrow(190,70,110,170,RED,false,'') +
+     dArrow(180,195,280,195,RED,false,'') +
+     dArrow(350,170,255,70,RED,false,'')
+   )},
+
+  {cat:"Diagram", q:"This diagram shows a clean top-to-bottom dependency chain. Does it comply with the module validation rules?", opts:[
+    "No — the End-user module should not depend on anything",
+    "Yes — each module only references the layer directly below it, no upward or circular references",
+    "No — it's missing a Foundation module",
+    "No — Core should reference End-user, not the reverse"
+  ], correct:1, explain:"Downward-only references, one layer at a time, is exactly what compliant architecture looks like.",
+   diagram: dWrap(460,260,
+     dBox(160,20,140,50,'EndUser_1','(End-user)','var(--enduser-blue)') +
+     dBox(160,110,140,50,'Core_1','(Core)','var(--core-orange)') +
+     dBox(160,200,140,50,'Foundation_1','(Foundation)','var(--foundation-green)') +
+     dArrow(230,70,230,110,'#1b1f2a') +
+     dArrow(230,160,230,200,'#1b1f2a')
+   )},
+
+  {cat:"Diagram", q:"In this integration setup, Customer_CS calls the ERP system directly, with no intermediate module. What's missing according to the Integration Pattern?", opts:[
+    "Nothing is missing — this is a valid Direct Integration",
+    "An Integration Service (_IS) between the Core Service and the external system, to abstract the integration",
+    "A Business Logic module",
+    "A Theme module"
+  ], correct:1, explain:"Even Direct Integration (the 'fresh data' variation) still goes through an Integration Service — the IS is what abstracts the external API and hides integration details from the Core Service.",
+   diagram: dWrap(460,180,
+     dBox(50,60,140,55,'Customer_CS','(Core)','var(--core-orange)') +
+     dBox(280,60,140,55,'ERP','(External)','var(--ext-grey)') +
+     dArrow(190,87,280,87,RED,false,'direct call')
+   )},
+
+  {cat:"Diagram", q:"This diagram shows Customer_CS holding entity data, fed by Customer_Sync on a recurring timer, which in turn reads from Customer_IS → ERP. Which pattern is this?", opts:[
+    "Direct Integration",
+    "Local Replica with Batch Sync",
+    "Transparency Service",
+    "Extension Pattern"
+  ], correct:1, explain:"A Sync module populating a local entity on a schedule (timer icon) is the Local Replica pattern using Batch Sync.",
+   diagram: dWrap(520,230,
+     dBox(40,30,140,55,'Customer_CS','(Core, entity)','var(--core-orange)') +
+     dBox(280,30,150,55,'Customer_Sync','(Core, ⏱ scheduled)','var(--core-orange)') +
+     dBox(40,150,140,55,'Customer_IS','(Foundation)','var(--foundation-green)') +
+     dBox(280,150,150,55,'ERP','(External)','var(--ext-grey)') +
+     dArrow(280,57,180,57,'#1b1f2a',false,"updates") +
+     dArrow(110,85,110,150,'#1b1f2a') +
+     dArrow(355,85,355,150,'#1b1f2a') +
+     dArrow(280,177,190,177,'#1b1f2a')
+   )},
+
+  {cat:"Diagram", q:"Here, the ERP publishes change events to a bus, which Customer_Sync subscribes to, updating Customer_CS immediately. Which pattern and sync style is this?", opts:[
+    "Local Replica with Batch Sync",
+    "Local Replica with Real-time Sync (pub/sub)",
+    "Direct Integration",
+    "Transparency Service"
+  ], correct:1, explain:"Event-driven updates via a bus/callback (instead of a timer) is the Real-time Sync variation of Local Replica.",
+   diagram: dWrap(520,230,
+     dBox(40,30,140,55,'Customer_CS','(Core, entity)','var(--core-orange)') +
+     dBox(280,30,150,55,'Customer_Sync','(Core, event-driven)','var(--core-orange)') +
+     dBox(280,150,150,55,'ERP','(External)','var(--ext-grey)') +
+     dArrow(280,57,180,57,'#1b1f2a',false,"updates") +
+     dArrow(355,150,355,85,'#1b1f2a',false,"publishes event")
+   )},
+
+  {cat:"Diagram", q:"Customer_IS routes requests to three different Driver modules, each wrapping a different regional system for the same 'Customer' concept. What is this Foundation-layer setup called?", opts:[
+    "Extension Pattern",
+    "Transparency Service",
+    "Core Entity Pattern",
+    "Business Logic Pattern"
+  ], correct:1, explain:"One Integration Service picking among multiple Driver modules for the same business concept is the Transparency Service pattern.",
+   diagram: dWrap(560,260,
+     dBox(210,20,140,50,'Customer_IS','(Foundation)','var(--foundation-green)') +
+     dBox(30,120,140,50,'ERP1_Drv','(Foundation)','var(--foundation-green)') +
+     dBox(210,120,140,50,'ERP2_Drv','(Foundation)','var(--foundation-green)') +
+     dBox(390,120,140,50,'SaaS_Drv','(Foundation)','var(--foundation-green)') +
+     dBox(30,210,140,45,'ERP1 (NA)','','var(--ext-grey)') +
+     dBox(210,210,140,45,'ERP2 (EMEA)','','var(--ext-grey)') +
+     dBox(390,210,140,45,'SaaS (APAC)','','var(--ext-grey)') +
+     dArrow(250,70,100,120,'#1b1f2a') +
+     dArrow(280,70,280,120,'#1b1f2a') +
+     dArrow(310,70,460,120,'#1b1f2a') +
+     dArrow(100,170,100,210,'#1b1f2a') +
+     dArrow(280,170,280,210,'#1b1f2a') +
+     dArrow(460,170,460,210,'#1b1f2a')
+   )},
+
+  {cat:"Diagram", q:"An Application bundles the modules shown below. According to the application-layering rule, what layer is this Application classified as?", opts:[
+    "Core App",
+    "Foundation App",
+    "End-user App",
+    "Applications are never assigned a layer"
+  ], correct:2, explain:"An application's layer equals the highest (most upward) layer among its modules — one End-user module is enough to make the whole app an End-user App.",
+   diagram: dWrap(500,230,
+     `<rect x="20" y="15" width="460" height="200" rx="10" fill="none" stroke="#1b1f2a" stroke-width="2" stroke-dasharray="6,4"/>
+      <text x="40" y="35" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#1b1f2a">Application: "OrderPortal"</text>` +
+     dBox(190,55,140,50,'Order_W','(End-user)','var(--enduser-blue)') +
+     dBox(50,140,140,50,'Order_CS','(Core)','var(--core-orange)') +
+     dBox(310,140,140,50,'Product_CS','(Core)','var(--core-orange)') +
+     dArrow(230,105,145,140,'#1b1f2a') +
+     dArrow(280,105,360,140,'#1b1f2a')
+   )},
+
+  {cat:"Diagram", q:"App A (owned by Team Sales) and App B (owned by Team Finance) both directly consume the same Customer_CS module, and each team requests conflicting changes to it. What does this diagram illustrate?", opts:[
+    "A Rule 1 — No Upward References violation",
+    "A Rule 3 (Applications) — Don't Mix Owners situation; Customer_CS may need to split or change ownership",
+    "A correctly designed shared Core module — no action needed",
+    "A Circular Reference"
+  ], correct:1, explain:"Different owners depending on the same module and pulling it in different directions is exactly the 'Don't Mix Owners' smell.",
+   diagram: dWrap(460,230,
+     dBox(20,20,150,50,'App A','(Team Sales)','var(--enduser-blue)') +
+     dBox(290,20,150,50,'App B','(Team Finance)','var(--enduser-blue)') +
+     dBox(150,150,160,55,'Customer_CS','(Core, shared)','var(--core-orange)') +
+     dArrow(100,70,200,150,'#1b1f2a') +
+     dArrow(360,70,270,150,'#1b1f2a')
+   )},
+
+  {cat:"Diagram", q:"This before/after pair shows an 'Extract a Core' refactor. In the 'after' state, what should be true of the original consumers of the module named Orders?", opts:[
+    "They must all be manually re-pointed to Orders_CS",
+    "They keep working unchanged, because the clone retains the original name 'Orders' and now simply references the new Orders_CS",
+    "They break until the next major release",
+    "They must be migrated to a different Application"
+  ], correct:1, explain:"The whole point of Extract a Core is that consumers/URLs are unaffected — the clone keeps the original name and delegates to the new Core module.",
+   diagram: dWrap(560,240,
+     `<text x="20" y="25" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#1b1f2a">BEFORE</text>` +
+     dBox(20,40,150,55,'Orders','(entities+logic+UI)','var(--enduser-blue)') +
+     `<text x="330" y="25" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#1b1f2a">AFTER</text>` +
+     dBox(300,40,120,55,'Orders','(clone, UI only)','var(--enduser-blue)') +
+     dBox(300,150,150,55,'Orders_CS','(new Core, entities+logic)','var(--core-orange)') +
+     dArrow(360,95,365,150,'#1b1f2a',false,"references")
+   )},
+
+  {cat:"Diagram", q:"Discovery flags 3 issues on your architecture: (1) an End-user module with an upward reference into another End-user module's actions and 12 consumers, (2) a direct cycle between two Core modules, (3) an upward reference from Core into another Core module (not cyclic) with 40 consumers. Which should you refactor first?", opts:[
+    "Issue 3, because it has the most consumers",
+    "Issue 1, because upper/side references to End-user modules are always the top-priority tier regardless of consumer count",
+    "Issue 2, because circular references are always worst no matter the layer",
+    "Whichever is fastest to fix"
+  ], correct:1, explain:"The prioritization order is fixed by tier first (End-user upper/side refs > Core cycles > Core upper refs > Foundation cycles); consumer count is only a tie-breaker *within* the same tier.",
+   diagram: dWrap(600,210,
+     dBox(20,20,170,50,'Issue 1: EndUser upward ref','12 consumers','var(--enduser-blue)') +
+     dBox(210,20,170,50,'Issue 2: Core ↔ Core cycle','','var(--core-orange)') +
+     dBox(400,20,180,50,'Issue 3: Core upward ref','40 consumers','var(--core-orange)') +
+     `<text x="300" y="112" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11.5" font-weight="700" fill="#1b1f2a">Fix order: Tier 1 &#8594; Tier 2 &#8594; Tier 3 &#8594; Tier 4</text>
+      <text x="300" y="132" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10.5" fill="#5a5647">(consumer count only breaks ties inside the same tier)</text>`
+   )}
+];
+
+const mnemonics = [
+  {hook:"Modular Programming", phrase:"“AICT” — Ain't It Complex, Team?", text:"Abstraction, Isolation, Complexity management, Teamwork — the 4 benefits of modular programming."},
+  {hook:"Canvas Layers & Colors", phrase:"Blue on top, Orange in the middle, Green down low", text:"In the diagrams: End-user = blue (UI/Processes), Core = orange (APIs/services), Foundation = green (integration/NFRs). External systems are grey, at the very bottom."},
+  {hook:"Integration Pattern Flow", phrase:"“CS calls IS calls the outside world”", text:"Consumer → Core Service (_CS, orange) → Integration Service (_IS, green) → External System (grey). Always in that order, never skipping a layer."},
+  {hook:"Module Validation Rules", phrase:"“No UP, no SIDE-eye, no LOOP”", text:"Rule 1 = No Upward references. Rule 2 = No Side references between End-user modules (except screens). Rule 3 = No circular references (loop)."},
+  {hook:"App Validation Rules", phrase:"“Layer it, Layer it, Own it, Fund it”", text:"Rule 1 Layer modules correctly, Rule 2 Layer applications correctly, Rule 3 Don't mix Owners, Rule 4 Don't mix Sponsors (funding/business lines)."},
+  {hook:"Design Process", phrase:"“DOA” — Disclose, Organize, Assemble", text:"The 3-step Architecture Design Process, always in this order, applied per requirement then merged."},
+  {hook:"Core Suffixes", phrase:"“Cool Business Cats Engineer Sync APIs”", text:"_CS, _BL, _CW, _Eng, _Sync, _API — the six Core-layer naming suffixes, in that mnemonic sentence order."},
+  {hook:"Foundation Suffixes", phrase:"“Little Islands Drive Themed Pattern Plugins”", text:"_Lib, _IS, _Drv, _Th, _Pat, _Plug — the six Foundation-layer naming suffixes."},
+  {hook:"Extract a Core", phrase:"“I Clone, Rename twice, Keep, Remove, Reference”", text:"Identify → Clone → Rename original to _CS → (clone keeps the name) → Keep consumed elements → Remove them from the clone → Reference the new Core. 7 beats, 6 real steps (rename happens to both modules)."},
+  {hook:"Mobile Top 3", phrase:"“Lazy, Local, Less”", text:"Think Lazy Load, Use Local Storage, Avoid (Less) Server Calls — the three pillars of Mobile Architecture."},
+  {hook:"Mobile Events Order", phrase:"“I Rise, Render, Retrieve, React, Rest”", text:"OnInitialize (Rise) → OnReady → OnRender → OnAfterFetch (Retrieve) → OnParametersChanged (React, for blocks) → OnDestroy (Rest)."},
+  {hook:"ISO Standard Upgrade", phrase:"“9126 + SC = 25010”", text:"ISO 25010:2011 is ISO 9126:1991 plus Security and Compatibility — 6 characteristics become 8."},
+  {hook:"Sync Decision Gate", phrase:"“Replicate? Stable? Reused? Solo source?”", text:"Ask in order: OK to replicate? → Do summary fields change often (else Batch)? → Is detail reused a lot (else fetch live)? → Only one source (else Transparency Service)?"},
+  {hook:"Style Guide Choice", phrase:"“Specialize to inherit, Clone to sprint”", text:"Specialize = stay linked to the base theme and inherit updates (slower). Clone = break the link and run fastest (no auto-updates)."},
+  {hook:"Passing Score", phrase:"“Seventy to certify”", text:"70% or above is the passing bar on every OutSystems Specialization exam — architecture included."},
+  {hook:"BPT Process Move", phrase:"“Copy, Cut the trigger, Cover all envs, Clear it out”", text:"Copy the process to the new module → untrigger (cut) the old one so it stops accepting new instances → deploy to cover all environments → clear/delete the old process once drained."}
+];
+
+/* ================= FLASHCARDS LOGIC ================= */
+let fcFiltered = [...flashcards];
+let fcIndex = 0;
+
+const fcTopicSel = document.getElementById('fc-topic');
+TOPICS.forEach(t=>{
+  const o = document.createElement('option');
+  o.value = t; o.textContent = t === "All" ? "All topics" : t;
+  fcTopicSel.appendChild(o);
+});
+
+function renderFlashcard(){
+  const card = fcFiltered[fcIndex];
+  document.getElementById('flashcard').classList.remove('flipped');
+  document.getElementById('fc-tag-front').textContent = card.topic;
+  document.getElementById('fc-tag-back').textContent = "ANSWER";
+  document.getElementById('fc-front-text').textContent = card.front;
+  document.getElementById('fc-back-text').textContent = card.back;
+  document.getElementById('fc-progress').textContent = `${fcIndex+1} / ${fcFiltered.length}`;
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+document.getElementById('flashcard').addEventListener('click', ()=>{
+  document.getElementById('flashcard').classList.toggle('flipped');
+});
+document.getElementById('fc-flip-btn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('flashcard').classList.toggle('flipped');
+});
+document.getElementById('fc-next').addEventListener('click', ()=>{
+  fcIndex = (fcIndex+1) % fcFiltered.length;
+  renderFlashcard();
+});
+document.getElementById('fc-prev').addEventListener('click', ()=>{
+  fcIndex = (fcIndex-1+fcFiltered.length) % fcFiltered.length;
+  renderFlashcard();
+});
+document.getElementById('fc-shuffle').addEventListener('click', ()=>{
+  shuffle(fcFiltered);
+  fcIndex = 0;
+  renderFlashcard();
+});
+fcTopicSel.addEventListener('change', ()=>{
+  const t = fcTopicSel.value;
+  fcFiltered = t === "All" ? [...flashcards] : flashcards.filter(c=>c.topic===t);
+  fcIndex = 0;
+  renderFlashcard();
+});
+renderFlashcard();
+
+/* ================= QUIZ LOGIC ================= */
+const QCATS = ["All", ...new Set(quizQuestions.map(q=>q.cat))];
+let quizActiveCat = "All";
+let quizSet = [];
+let quizIdx = 0;
+let quizScore = 0;
+let quizAnswered = 0;
+let quizLocked = false;
+
+const quizFiltersEl = document.getElementById('quiz-filters');
+QCATS.forEach(c=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip' + (c==='All' ? ' active':'');
+  chip.textContent = c;
+  chip.dataset.cat = c;
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    chip.classList.add('active');
+    quizActiveCat = c;
+    startQuizSet();
+  });
+  quizFiltersEl.appendChild(chip);
+});
+
+function startQuizSet(){
+  quizSet = quizActiveCat === "All" ? shuffle([...quizQuestions]) : shuffle(quizQuestions.filter(q=>q.cat===quizActiveCat));
+  quizIdx = 0; quizScore = 0; quizAnswered = 0; quizLocked = false;
+  document.getElementById('q-total').textContent = quizSet.length;
+  renderQuiz();
+}
+document.getElementById('q-restart').addEventListener('click', startQuizSet);
+
+function renderQuiz(){
+  const body = document.getElementById('quiz-body');
+  document.getElementById('q-score').textContent = quizScore;
+  document.getElementById('q-answered').textContent = quizAnswered;
+
+  if(quizIdx >= quizSet.length){
+    const pct = quizSet.length ? Math.round((quizScore/quizSet.length)*100) : 0;
+    body.innerHTML = `<div class="qcard quiz-done">
+      <div class="score-big">${pct}%</div>
+      <p>${quizScore} / ${quizSet.length} correct${pct>=70 ? " — that's a passing score! 🎉" : " — one more pass through the missed ones and you'll be solid."}</p>
+      <button class="btn primary" id="q-again">Run this set again</button>
+    </div>`;
+    document.getElementById('q-index').textContent = quizSet.length;
+    document.getElementById('q-again').addEventListener('click', startQuizSet);
+    return;
+  }
+
+  const item = quizSet[quizIdx];
+  document.getElementById('q-index').textContent = quizIdx+1;
+  quizLocked = false;
+
+  const optsHtml = item.opts.map((opt,i)=>`<button class="opt" data-i="${i}">${opt}</button>`).join('');
+  const diagramHtml = item.diagram ? item.diagram : '';
+  body.innerHTML = `<div class="qcard">
+      <div class="qcat">${item.cat}</div>
+      ${diagramHtml}
+      <p class="qtext">${item.q}</p>
+      <div class="options">${optsHtml}</div>
+      <div class="explain" id="explain-box">${item.explain}</div>
+      <div class="quiz-actions">
+        <span></span>
+        <button class="btn primary" id="q-next" style="display:none;">Next question →</button>
+      </div>
+    </div>`;
+
+  document.querySelectorAll('.opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(quizLocked) return;
+      quizLocked = true;
+      const chosen = parseInt(btn.dataset.i);
+      quizAnswered++;
+      document.querySelectorAll('.opt').forEach(o=>o.classList.add('disabled'));
+      if(chosen === item.correct){
+        btn.classList.add('correct');
+        quizScore++;
+      } else {
+        btn.classList.add('incorrect');
+        document.querySelector(`.opt[data-i="${item.correct}"]`).classList.add('correct');
+      }
+      document.getElementById('explain-box').classList.add('show');
+      document.getElementById('q-next').style.display = 'inline-block';
+      document.getElementById('q-score').textContent = quizScore;
+      document.getElementById('q-answered').textContent = quizAnswered;
+    });
+  });
+  document.getElementById('q-next').addEventListener('click', ()=>{
+    quizIdx++;
+    renderQuiz();
+  });
+}
+startQuizSet();
+
+/* ================= MNEMONICS RENDER ================= */
+const mnemoGrid = document.getElementById('mnemo-grid');
+mnemonics.forEach(m=>{
+  const div = document.createElement('div');
+  div.className = 'mnemo-card';
+  div.innerHTML = `<div class="hook">${m.hook}</div><h4 class="phrase">${m.phrase}</h4><p>${m.text}</p>`;
+  mnemoGrid.appendChild(div);
+});
+
+/* ================= PODCAST DATA ================= */
+const podcastEpisodes = [
+{
+  title: "1. The Canvas, in Plain English",
+  sentences: [
+    "Welcome back — let's talk about the Architecture Canvas, the single most important mental model for this exam.",
+    "Think of it as a three story building.",
+    "On the top floor you've got the End user layer — that's every screen, every process, everything a real person actually clicks on.",
+    "One floor down is Core — this is where your business concepts live, things like Customer, Product, or Contract, exposed as clean A P Is and core services.",
+    "In the basement is Foundation — this is the plumbing: integration services that talk to the outside world, plus your non functional requirements like theming and authentication.",
+    "Here's the one rule that ties the whole building together: you can only ever look downstairs, never upstairs.",
+    "End user modules can depend on Core, Core can depend on Foundation, but Foundation should never reach up into Core, and Core should never reach up into End user.",
+    "Why does this matter so much? Three reasons, and OutSystems repeats these three reasons constantly, so let's lock them in.",
+    "Reason one: it promotes abstraction of reusable services — you build something once in Core, and every End user app can reuse it without knowing how it works underneath.",
+    "Reason two: it optimizes lifecycle independence — Foundation and Core change slowly and carefully, while End user apps can move fast and ship often, without breaking each other.",
+    "Reason three: it minimizes the impact of change — if something breaks in Foundation, you know exactly which Core services might be affected, and from there, which End user apps.",
+    "Quick historical detour, because this shows up as trivia: ISO 9126 from 1991 defined six software quality characteristics.",
+    "ISO 25010, from 2011, kept all six and bolted on two more: Security, and Compatibility.",
+    "So if you see a question asking what's new in 25010 versus 9126, the answer is Security and Compatibility.",
+    "Let's talk about why we bother with modules in the first place — modular programming.",
+    "Four benefits, and I like the acronym A I C T: Abstraction, Isolation, Complexity management, and Teamwork.",
+    "Abstraction means consumers don't need to know how something works, just what it does.",
+    "Isolation means a bug or a change in one module doesn't ripple through everything else.",
+    "Complexity management means you can break a huge system into small, understandable pieces — divide and conquer.",
+    "And Teamwork means multiple developers, or multiple teams, can work in parallel without stepping on each other's toes.",
+    "Last piece for this episode: how do you actually design one of these architectures? There's a three step process: Disclose, Organize, Assemble.",
+    "Disclose means gathering all the requirements and concepts involved.",
+    "Organize means placing those concepts into the right layer — End user, Core, or Foundation.",
+    "And Assemble means putting the modules together into applications, respecting ownership and sponsor boundaries.",
+    "That's the Canvas in a nutshell — three layers, one direction of dependency, and three big reasons why it's worth doing properly.",
+    "Next episode, we get into patterns — Integration, Foundation, Core, and Sync — where all of this becomes concrete."
+  ]
+},
+{
+  title: "2. Patterns: Integration, Foundation, Core & Sync",
+  sentences: [
+    "Let's get concrete with Patterns — the reusable shapes you'll see over and over in real OutSystems architectures.",
+    "First up: the Integration Pattern, and it always has three parts.",
+    "A Core Service, sometimes just called C S, extends the original business concept and stays agnostic of any particular external system.",
+    "Below that, an Integration Service, or I S, abstracts the actual external A P I, hiding the messy technical details.",
+    "And below that, the external system itself — could be an E R P, a C R M, anything outside OutSystems.",
+    "So the flow is always: consumer, to Core Service, to Integration Service, to External System — never skipping a layer.",
+    "There are two flavors of this pattern, and the exam loves asking you to tell them apart.",
+    "Flavor one: Direct Integration — every request goes live, all the way out to the external system.",
+    "Benefit: your data is always perfectly fresh. Downside: more hits on the external system, more latency, and you often need a separate A P I for every retrieval use case.",
+    "Flavor two: Local Replica — you keep a cached copy of the data inside a Core Service entity, and a separate Sync module keeps that copy up to date.",
+    "Benefit: way less load on the external system, a simpler A P I, and you can mash up data from multiple places easily.",
+    "Downside: you now need a syncing strategy, and there's a window where the data might be stale.",
+    "Speaking of syncing strategies, there are two: Batch Sync and Real time Sync.",
+    "Batch Sync runs on a timer — simple, reliable, but the data can lag behind.",
+    "Real time Sync uses a publish and subscribe setup, often through an Enterprise Service Bus — the external system publishes a change, and your Sync module, which is subscribed, reacts immediately.",
+    "How do you decide between all of these? Ask yourself a chain of questions.",
+    "Is it even okay to replicate this data? If not, go Direct Integration.",
+    "If yes, do the summary fields change frequently? If they do, lean toward Real time Sync; if not, Batch Sync is fine.",
+    "Is the detail data reused a lot? If yes, consider lazy loading those details only when needed.",
+    "And here's a big one: is there more than one external source for the same concept? If so, you need a Transparency Service.",
+    "A Transparency Service sits behind one Integration Service, and it picks between multiple Driver modules — say, one driver per regional E R P — normalizing everything into one consistent shape for the consumer.",
+    "Let's move to Foundation Patterns specifically. The Extension Pattern is for wrapping something external and reusable — either an external code library, or entities that live in an external database.",
+    "Foundation Services are about exposing a clean, normalized A P I on top of a connector — think a Salesforce connector wrapped into a clean integration service that everyone else consumes.",
+    "And don't forget Integration Services Granularity — if you're integrating with a huge system like S A P, don't build one giant Integration Service with hundreds of actions.",
+    "Split it by function area — a finance one, an H R one, a materials management one — so no single module becomes a bottleneck for every consumer.",
+    "Now, Core Patterns. The Core Entity Pattern says: expose your entities as read only, and centralize every create, update, and delete into public server actions.",
+    "That way, every consumer changes data the same, controlled way — no one is reaching in and writing straight to the database.",
+    "And the Business Logic Pattern — modules with a B L suffix — exist for composite processes that touch more than one Core Service.",
+    "Picture a Customer B L module that needs both a Contract Core Service and a Customer Core Service to react to a single business event.",
+    "That's your pattern toolkit — Consumer, to Core Service, to Integration Service, to the outside world, with Local Replica, Sync, Transparency, Extension, and Business Logic patterns layered in wherever the situation calls for them.",
+    "Next up: how we validate all of this, and what to do when it's wrong."
+  ]
+},
+{
+  title: "3. Validation, Refactoring & Moving Things Around",
+  sentences: [
+    "Time to talk about the rules that keep an architecture honest, starting at the module level.",
+    "Rule one: No Upward References. A module can never call something in a layer above it. Foundation can't call Core, Core can't call End user.",
+    "Rule two: No Side References between End user modules, with one exception: screen references are allowed, because linking to another screen is normal navigation, not a hidden logic dependency.",
+    "Rule three: No Circular References — if module A depends on B, B depends on C, and C depends back on A, that's a cycle, and cycles make everything harder to deploy independently.",
+    "Now zoom out to the Application level, because applications get validated too, with four of their own rules.",
+    "Application rule one: layer your modules correctly — this is just making sure the module level rules are actually being followed.",
+    "Application rule two: layer your applications correctly, and here's the key fact — an application's layer is defined by the highest layer module inside it.",
+    "So if an app has ninety nine Core modules and just one End user module, that whole application is classified as an End user application.",
+    "Application rule three: Don't Mix Owners — if a module is being consumed by teams other than the one that owns it, and their needs start pulling in different directions, split the module or formally transfer ownership.",
+    "Application rule four: Don't Mix Sponsors — different lines of business need to deploy on their own schedule, so keep only the truly common stuff shared, and let each business line own the rest independently.",
+    "When Discovery or A I Mentor flags a pile of violations, you can't fix them all at once, so there's a priority order, and this is a favorite trick question.",
+    "Priority one: upper or side references into End user modules.",
+    "Priority two: direct cycles between Core modules.",
+    "Priority three: upper references into Core modules.",
+    "Priority four: direct cycles between Foundation modules.",
+    "Here's the trap: that order is fixed by tier, no matter how many consumers are involved — a priority one issue with ten consumers still gets fixed before a priority three issue with a hundred consumers.",
+    "Consumer count only breaks ties within the same tier, not across tiers.",
+    "Let's talk about actually extracting a Core, step by step, when a module has grown too many responsibilities.",
+    "Step one: identify which elements are actually being consumed by others.",
+    "Step two: clone the module.",
+    "Step three: rename the original copy, adding a C S suffix — that one becomes your new dedicated Core Service.",
+    "Step four: the clone keeps the original name, so every existing consumer and every existing U R L keeps working without any changes.",
+    "Step five: keep the consumed elements, and their dependencies, inside the new Core module, and remove them from the clone.",
+    "Step six: have the clone reference the new Core module for anything it still needs.",
+    "The whole point is that from the outside, nothing looks different — the surgery happens underneath.",
+    "One more practical skill: moving individual elements between modules.",
+    "Actions, Structures, Blocks, and Screens are generally safe to move — just double check who's consuming them.",
+    "But four things need extra care: Timers, because of their schedule configuration; Site Properties, because their effective value is set per environment; Web references, because endpoints can shift; and Roles, because of existing user assignments.",
+    "If you're moving a B P T process specifically, don't just cut and paste it — copy it to the new module first, then untrigger the old one so it stops accepting new instances while any in flight instances finish naturally, deploy everywhere, and only delete the old process once everything has drained.",
+    "And if you're moving an Entity along with its data, use the Refactor component: copy the entity to the target module, run the refactor tool, do a full compile across all affected modules before touching any references, then update the reference, and publish.",
+    "Get those two migration checklists memorized, because scenario questions love describing exactly this kind of mid air surgery and asking what step comes next."
+  ]
+},
+{
+  title: "4. Mobile Architecture & Style Guides",
+  sentences: [
+    "Let's switch gears to mobile architecture, because OutSystems treats mobile as genuinely different from reactive web, not just a smaller screen.",
+    "Three guiding principles, and I think of them as Lazy, Local, and Less.",
+    "Lazy: think lazy loading — don't try to fetch everything the moment a screen initializes; fetch what's needed, when it's needed, ideally in parallel.",
+    "Local: use local storage, but keep it lightweight — don't just mirror the entire server database structure onto the device, only store the specific fields and records the app actually needs.",
+    "Less: avoid unnecessary server calls — every round trip costs battery, time, and reliability, especially on a spotty connection.",
+    "Now, the screen lifecycle, because the exam loves ordering questions here.",
+    "First, On Initialize, which fires before navigation and before any data fetching happens.",
+    "Then On Ready, once the screen's structure exists.",
+    "Then On Render, which actually fires every time the data changes, not just once.",
+    "Then On After Fetch, right after an aggregate or data fetch completes, but before rendering that new data.",
+    "For blocks specifically, there's also On Parameters Changed, when an input parameter updates.",
+    "And finally On Destroy, when the screen is torn down.",
+    "A common mistake the exam will describe: fetching all your data inside On Initialize, which blocks navigation and makes the app feel sluggish — the fix is always to make that fetching lazy, parallel, or on demand.",
+    "On security: mobile apps should use S S L Pinning, which checks the server's certificate directly on the device, protecting against man in the middle attacks even on compromised networks.",
+    "Now, Style Guides, which is really about your Theme architecture across an entire portfolio of apps.",
+    "Four building blocks: the Theme itself, which holds your C S S; U I Patterns, your reusable components; a Template, which bundles menu, login, and a theme reference together; and a Live Style Guide, which is a running example of it all in action.",
+    "When you're building a custom style guide on top of OutSystems U I, you've got two choices: Specialize, or Clone.",
+    "Specialize means your custom theme keeps a live reference back to the base theme — you automatically inherit future OutSystems updates, at a small performance cost.",
+    "Clone means you copy the base theme outright — best possible performance, but you're on your own for future updates.",
+    "And when you're sharing a style guide across multiple applications, there are three common setups: Independent Apps, each with their own menu and their own login; Intranet, sharing a login flow but keeping separate menus; and Portal, sharing both a common menu and a common login.",
+    "One more rule worth repeating, because it's easy to violate by accident: keep your C S S inside the Theme, never scattered across individual Blocks or Screens — it keeps performance predictable and your look and feel consistent.",
+    "That's mobile and styling — lazy, local, less, get your lifecycle order memorized, and know your Specialize versus Clone trade off cold."
+  ]
+},
+{
+  title: "5. Naming Conventions & Final Cram",
+  sentences: [
+    "Last episode — let's speed run the naming conventions, because these show up constantly as quick recognition questions.",
+    "In the Core layer, six suffixes: C S for Core Service, B L for Business Logic, C W for Core Widgets, Eng for a calculation Engine, Sync for a synchronization module, and A P I for a module explicitly exposing an A P I to consumers outside OutSystems.",
+    "In the Foundation layer, six more: Lib for a generic library, I S for an Integration Service, Drv for a Driver module, usually the implementation behind a Transparency Service, Th for Theme, Pat for U I Patterns, and Plug for a Plugin.",
+    "And if a module is mobile only, you just tack on an extra M — so Th becomes M Th, and Pat becomes M Pat.",
+    "Alright, let's do one final speed lap through everything, like flashcards out loud.",
+    "Three layers: End user on top, Core in the middle, Foundation on the bottom — dependencies only ever point downward.",
+    "Three module validation rules: no upward references, no side references between End user modules except for screens, no circular references.",
+    "Four application validation rules: layer your modules correctly, layer your applications correctly based on their highest layer module, don't mix owners, don't mix sponsors.",
+    "Refactoring priority, fixed tier order: End user upward or side references first, then Core cycles, then Core upward references, then Foundation cycles — consumer count only breaks ties inside a tier.",
+    "Extracting a Core: identify, clone, rename the original to C S, keep the clone's name, keep the shared stuff in the new Core, remove it from the clone, and reference the Core — consumers never notice.",
+    "Mobile: lazy loading, lightweight local storage, avoid unnecessary server calls, and know your screen lifecycle order — Initialize, Ready, Render, After Fetch, Parameters Changed for blocks, Destroy.",
+    "Style guides: Specialize to inherit updates, Clone for maximum performance, and three sharing setups — Independent, Intranet, Portal.",
+    "Integration patterns: Core Service, Integration Service, External System, always in that order — Direct Integration for freshness, Local Replica plus Batch or Real time Sync for less external load, and Transparency Service the moment more than one source represents the same concept.",
+    "Design process: Disclose, Organize, Assemble.",
+    "And the number that matters most tonight: seventy percent to pass.",
+    "You've now heard this material twice — once in your own studying, and once out loud, in your ear, on your way to the exam.",
+    "Walk in, trust the layers, trust the rules, and go pass this thing."
+  ]
+}
+];
+
+/* ================= PODCAST PLAYER LOGIC ================= */
+const ttsSupported = 'speechSynthesis' in window;
+let podEpIdx = 0;
+let podLineIdx = 0;
+let podSpeaking = false;
+let podRate = 1;
+let podVoice = null;
+let podVoicesList = [];
+
+const podEpisodeListEl = document.getElementById('podcast-episode-list');
+const podTranscriptEl = document.getElementById('pod-transcript');
+const podTitleEl = document.getElementById('pod-ep-title');
+const podProgressBar = document.getElementById('pod-progress-bar');
+const podPlayBtn = document.getElementById('pod-playpause');
+
+function estimateMinutes(sentences){
+  const words = sentences.join(' ').split(/\s+/).length;
+  return Math.max(1, Math.round(words / 150));
+}
+
+function renderEpisodeList(){
+  podEpisodeListEl.innerHTML = '';
+  podcastEpisodes.forEach((ep, i)=>{
+    const div = document.createElement('div');
+    div.className = 'pod-ep-item' + (i===podEpIdx ? ' active':'') + (i===podEpIdx && podSpeaking ? ' playing':'');
+    div.innerHTML = `${ep.title}<span class="pod-ep-len">~${estimateMinutes(ep.sentences)} min</span>`;
+    div.addEventListener('click', ()=>{ loadEpisode(i); });
+    podEpisodeListEl.appendChild(div);
+  });
+}
+
+function renderTranscript(){
+  const ep = podcastEpisodes[podEpIdx];
+  podTitleEl.textContent = ep.title;
+  podTranscriptEl.innerHTML = ep.sentences.map((s,i)=>`<span class="pod-sentence" data-i="${i}">${s} </span>`).join('');
+}
+
+function highlightLine(i){
+  document.querySelectorAll('.pod-sentence').forEach(el=>el.classList.remove('active'));
+  const el = document.querySelector(`.pod-sentence[data-i="${i}"]`);
+  if(el){
+    el.classList.add('active');
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+  const total = podcastEpisodes[podEpIdx].sentences.length;
+  podProgressBar.style.width = `${Math.round(((i+1)/total)*100)}%`;
+}
+
+function loadEpisode(i, autoplay){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  podEpIdx = i;
+  podLineIdx = 0;
+  podSpeaking = false;
+  renderEpisodeList();
+  renderTranscript();
+  highlightLine(0);
+  updatePlayButton();
+  if(autoplay) togglePlay(true);
+}
+
+function updatePlayButton(){
+  podPlayBtn.textContent = podSpeaking ? '⏸' : '▶';
+  renderEpisodeList();
+}
+
+function speakLine(i){
+  if(!ttsSupported) return;
+  const ep = podcastEpisodes[podEpIdx];
+  if(i >= ep.sentences.length){
+    podSpeaking = false;
+    updatePlayButton();
+    const autoAdv = document.getElementById('pod-autoadvance').checked;
+    if(autoAdv && podEpIdx < podcastEpisodes.length-1){
+      loadEpisode(podEpIdx+1, true);
+    }
+    return;
+  }
+  podLineIdx = i;
+  highlightLine(i);
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(ep.sentences[i]);
+  utter.rate = podRate;
+  if(podVoice) utter.voice = podVoice;
+  utter.onend = ()=>{ if(podSpeaking) speakLine(i+1); };
+  utter.onerror = ()=>{ podSpeaking = false; updatePlayButton(); };
+  window.speechSynthesis.speak(utter);
+}
+
+function togglePlay(forcePlay){
+  if(!ttsSupported) return;
+  if(podSpeaking && !forcePlay){
+    window.speechSynthesis.cancel();
+    podSpeaking = false;
+    updatePlayButton();
+  } else {
+    podSpeaking = true;
+    updatePlayButton();
+    speakLine(podLineIdx);
+  }
+}
+
+function stopEpisode(){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  podSpeaking = false;
+  podLineIdx = 0;
+  highlightLine(0);
+  updatePlayButton();
+}
+
+function stepLine(delta){
+  if(ttsSupported) window.speechSynthesis.cancel();
+  const ep = podcastEpisodes[podEpIdx];
+  podLineIdx = Math.min(Math.max(podLineIdx+delta,0), ep.sentences.length-1);
+  highlightLine(podLineIdx);
+  if(podSpeaking) speakLine(podLineIdx);
+}
+
+function populatePodVoices(){
+  if(!ttsSupported) return;
+  const all = window.speechSynthesis.getVoices();
+  podVoicesList = all.filter(v=>v.lang.toLowerCase().startsWith('en'));
+  if(podVoicesList.length === 0) podVoicesList = all;
+  const sel = document.getElementById('pod-voice');
+  sel.innerHTML = podVoicesList.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+  if(podVoicesList.length){
+    podVoice = podVoicesList[0];
+  }
+}
+
+if(ttsSupported){
+  window.speechSynthesis.onvoiceschanged = populatePodVoices;
+  populatePodVoices();
+
+  document.getElementById('pod-playpause').addEventListener('click', ()=>togglePlay(false));
+  document.getElementById('pod-stop').addEventListener('click', stopEpisode);
+  document.getElementById('pod-next').addEventListener('click', ()=>stepLine(1));
+  document.getElementById('pod-prev').addEventListener('click', ()=>stepLine(-1));
+  document.getElementById('pod-rate').addEventListener('change', (e)=>{
+    podRate = parseFloat(e.target.value);
+    if(podSpeaking) speakLine(podLineIdx);
+  });
+  document.getElementById('pod-voice').addEventListener('change', (e)=>{
+    podVoice = podVoicesList[parseInt(e.target.value)];
+    if(podSpeaking) speakLine(podLineIdx);
+  });
+
+  renderEpisodeList();
+  renderTranscript();
+  highlightLine(0);
+} else {
+  document.getElementById('podcast-unsupported').style.display = 'block';
+  document.getElementById('podcast-app').style.display = 'none';
+}
+
+/* ================= TAB NAV ================= */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.view).classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
